@@ -10,6 +10,14 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef WHISPR_VERSION
+#define WHISPR_VERSION "unknown"
+#endif
+
+#ifndef WHISPR_GIT_SHA
+#define WHISPR_GIT_SHA ""
+#endif
+
 static void
 usage(void)
 {
@@ -23,6 +31,7 @@ usage(void)
         "  cancel              discard the recording\n"
         "  status [--json]     report state\n"
         "  reload              re-read the config file\n"
+        "  --version           print the version and exit\n"
         "\n"
         "daemon options:\n"
         "  --foreground        do not detach (default; systemd runs it this way)\n"
@@ -103,6 +112,18 @@ main(int argc, char **argv)
   if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))
   {
     usage();
+
+    return(0);
+  }
+
+  // Answered locally rather than over the socket: a bug report needs the
+  // version whether or not the daemon is running, and often it is not.
+  if(!strcmp(argv[1], "--version") || !strcmp(argv[1], "-V") || !strcmp(argv[1], "version"))
+  {
+    if(WHISPR_GIT_SHA[0])
+      printf("whispr %s (%s)\n", WHISPR_VERSION, WHISPR_GIT_SHA);
+    else
+      printf("whispr %s\n", WHISPR_VERSION);
 
     return(0);
   }
