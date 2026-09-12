@@ -1,0 +1,1 @@
+Please open the configuration file and increase the buffer size to sixty four kilobytes, then restart the service and check the logs.

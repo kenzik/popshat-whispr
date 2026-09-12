@@ -1,0 +1,4 @@
+build/
+models/
+*.o
+__pycache__/

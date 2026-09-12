@@ -1,0 +1,1 @@
+I'm running Hyprland on CachyOS with PipeWire and ydotool, and the whisper dot cpp build uses the Vulkan backend.
