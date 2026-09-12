@@ -1,0 +1,139 @@
+#!/usr/bin/env sh
+# Report everything a whispr bug report needs, in one screen.
+#
+# The failure this tool is built around is silence: the hotkey fires, capture
+# and transcription work, and nothing appears -- because a helper was not on
+# PATH, or ydotoold is not running, or the systemd user manager never learned
+# WAYLAND_DISPLAY. None of that is visible from the symptom, so check all of it
+# at once and print the answers rather than making someone guess.
+#
+# Home directories are printed as ~ so the output can be pasted in public.
+set -u
+
+SELF="$(cd "$(dirname "$0")" && pwd)"
+MODELDIR="${WHISPR_MODEL_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/whispr/models}"
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/whispr/config"
+
+tilde() { sed "s|$HOME|~|g"; }
+head2()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
+row()   { printf '  %-22s %s\n' "$1" "$2"; }
+have()  { command -v "$1" >/dev/null 2>&1; }
+yesno() { if have "$1"; then printf 'yes (%s)' "$(command -v "$1" | tilde)"; else printf 'NO'; fi; }
+
+printf '\033[1mwhispr doctor\033[0m  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+
+head2 "whispr"
+if have whispr; then
+    row "binary" "$(command -v whispr | tilde)"
+    row "version" "$(whispr --version 2>/dev/null || echo 'unknown (pre-0.1 build)')"
+else
+    row "binary" "NOT ON PATH -- keybinds must use an absolute path"
+fi
+row "helpers dir" "$(echo "$SELF" | tilde)"
+for h in whispr-inject whispr-notify; do
+    row "$h" "$(yesno "$h")"
+done
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) row "~/.local/bin on PATH" "yes" ;;
+    *)                      row "~/.local/bin on PATH" "NO -- the usual cause of total silence" ;;
+esac
+
+head2 "System"
+if [ -r /etc/os-release ]; then
+    row "distro" "$(. /etc/os-release; echo "${PRETTY_NAME:-$ID}")"
+fi
+row "kernel" "$(uname -sr)"
+row "session type" "${XDG_SESSION_TYPE:-unset}"
+row "desktop" "${XDG_CURRENT_DESKTOP:-unset}"
+row "WAYLAND_DISPLAY" "${WAYLAND_DISPLAY:-unset}"
+row "DISPLAY" "${DISPLAY:-unset}"
+
+head2 "Audio capture"
+found=
+for c in pw-record parecord arecord; do
+    if have "$c"; then
+        [ -z "$found" ] && found="$c"
+        row "$c" "yes"
+    else
+        row "$c" "no"
+    fi
+done
+[ -z "$found" ] && row "!!" "no capture program -- whispr cannot record"
+[ -n "$found" ] && row "will use" "$found"
+
+head2 "Text injection"
+row "ydotool" "$(yesno ydotool)"
+row "ydotoold running" "$(pgrep -x ydotoold >/dev/null 2>&1 && echo yes || echo NO)"
+SOCK="${YDOTOOL_SOCKET:-${XDG_RUNTIME_DIR:-/tmp}/.ydotool_socket}"
+row "ydotool socket" "$([ -S "$SOCK" ] && echo "yes ($(echo "$SOCK" | tilde))" || echo "MISSING ($(echo "$SOCK" | tilde))")"
+row "/dev/uinput" "$([ -w /dev/uinput ] && echo writable || echo "NOT writable -- text falls back to the clipboard")"
+row "udev rule" "$([ -f /etc/udev/rules.d/99-whispr-uinput.rules ] && echo present || echo absent)"
+row "wtype (wayland)" "$(yesno wtype)"
+row "xdotool (X11)" "$(yesno xdotool)"
+row "clipboard" "$(have wl-copy && echo wl-copy || { have xclip && echo xclip || echo none; })"
+row "notify-send" "$(yesno notify-send)"
+
+head2 "Models"
+if [ -d "$MODELDIR" ]; then
+    row "directory" "$(echo "$MODELDIR" | tilde)"
+    for m in ggml-base.en.bin ggml-silero-v5.1.2.bin ggml-parakeet-tdt-0.6b-v3-f16.bin; do
+        if [ -f "$MODELDIR/$m" ]; then
+            row "$m" "$(stat -c%s "$MODELDIR/$m") bytes"
+        else
+            row "$m" "absent"
+        fi
+    done
+    # VAD is on by default and whisper.cpp fails the entire transcription when
+    # its model is missing, so this particular absence is not a warning.
+    if [ ! -f "$MODELDIR/ggml-silero-v5.1.2.bin" ] && grep -qsE '^\s*whisper\.vad\s*=\s*true' "$CONF" 2>/dev/null; then
+        printf '  \033[31m!! VAD is enabled but its model is missing: every utterance will error.\033[0m\n'
+        printf '     Fix: scripts/install.sh   (or set whisper.vad = false)\n'
+    fi
+else
+    row "directory" "MISSING ($(echo "$MODELDIR" | tilde))"
+fi
+
+head2 "Configuration"
+if [ -f "$CONF" ]; then
+    row "file" "$(echo "$CONF" | tilde)"
+    # Only the keys that change which engine and model run. initial_prompt is
+    # deliberately not printed: it is the one field likely to hold something
+    # personal, and it is never the cause of a failure to start.
+    grep -E '^\s*(engine|use_gpu|gpu_device|whisper\.model|whisper\.vad|whisper\.vad_model|parakeet\.model|source)\s*=' "$CONF" \
+        | sed 's/^/    /' | tilde
+else
+    row "file" "absent ($(echo "$CONF" | tilde)) -- defaults in use"
+fi
+
+head2 "Daemon"
+if have systemctl && [ -d /run/systemd/system ]; then
+    row "unit" "$(systemctl --user is-active whispr.service 2>/dev/null || echo 'not active')"
+    row "unit enabled" "$(systemctl --user is-enabled whispr.service 2>/dev/null || echo no)"
+    row "ydotoold unit" "$(systemctl --user is-active ydotoold.service 2>/dev/null || echo 'not active')"
+    # The daemon inherits this environment. Without it injection silently
+    # does nothing at all, which looks exactly like a broken hotkey.
+    if systemctl --user show-environment 2>/dev/null | grep -qE '^(WAYLAND_DISPLAY|DISPLAY)='; then
+        row "systemd has display" "yes"
+    else
+        row "systemd has display" "NO -- injection will silently do nothing"
+        printf '     Fix: systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR\n'
+    fi
+else
+    row "systemd" "not in use -- start 'whispr daemon' from your autostart"
+fi
+row "socket" "$([ -S "${XDG_RUNTIME_DIR:-/tmp}/whispr.sock" ] && echo present || echo absent)"
+if have whispr; then
+    row "status" "$(timeout 3 whispr status 2>&1 | tr -d '\n' || echo 'no response')"
+fi
+
+head2 "Acceleration"
+W="$(command -v whispr 2>/dev/null || true)"
+if [ -n "$W" ] && have ldd; then
+    if ldd "$W" 2>/dev/null | grep -q vulkan; then
+        row "backend" "Vulkan"
+    else
+        row "backend" "CPU (rebuild with the Vulkan headers installed for GPU)"
+    fi
+fi
+
+printf '\n'

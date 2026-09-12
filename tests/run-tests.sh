@@ -13,9 +13,12 @@ FIX="$ROOT/tests/fixtures"
 CLI="${WHISPER_CLI:-$ROOT/build/bin/whisper-cli}"
 [ -x "$CLI" ] || CLI="$ROOT/vendor/whisper.cpp/build/bin/whisper-cli"
 MODEL="${WHISPER_MODEL:-$HOME/.local/share/whispr/models/ggml-base.en.bin}"
-# Ship the same vocabulary prompt the daemon uses, so the suite measures what
-# production actually does. Empirically this took jargon WER 0.42 -> 0.16 on
-# base.en. Set WHISPER_PROMPT="" to measure the unprimed baseline.
+# The vocabulary spoken in the fixtures. whispr itself ships NO default prompt
+# -- priming only helps for words the speaker actually says, so shipping one
+# person's vocabulary would bias every other user's decoder. This list is the
+# equivalent of a user filling in whisper.initial_prompt for their own jargon,
+# and it is what the thresholds below were set against: it takes jargon WER
+# from 0.42 to 0.16 on base.en. Set WHISPER_PROMPT="" for the unprimed baseline.
 PROMPT="${WHISPER_PROMPT-CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulkan, systemd, Keychron}"
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
@@ -23,8 +26,17 @@ trap 'rm -rf "$OUT"' EXIT
 # fixture:max_wer  -- silence is special-cased (any output at all is a failure)
 THRESHOLDS="short:0.35 plain:0.15 jargon:0.20"
 
-[ -x "$CLI" ]    || { echo "missing whisper-cli at $CLI" >&2; exit 1; }
-[ -f "$MODEL" ]  || { echo "missing model at $MODEL" >&2; exit 1; }
+# whisper-cli is an upstream example target, and install.sh only builds the
+# whispr binary -- so on a fresh install this is simply not there yet. Build it
+# rather than failing with an error that reads like something is broken.
+if [ ! -x "$CLI" ] && [ -d "$ROOT/build" ]; then
+    echo "building whisper-cli (one-off)..." >&2
+    cmake --build "$ROOT/build" -j"$(nproc 2>/dev/null || echo 4)" --target whisper-cli >/dev/null 2>&1 || true
+    CLI="${WHISPER_CLI:-$ROOT/build/bin/whisper-cli}"
+fi
+
+[ -x "$CLI" ]    || { echo "missing whisper-cli at $CLI -- run scripts/install.sh first" >&2; exit 1; }
+[ -f "$MODEL" ]  || { echo "missing model at $MODEL -- run scripts/install.sh first" >&2; exit 1; }
 
 # whisper.cpp reports non-speech as bracketed markers -- [BLANK_AUDIO], [Music],
 # (silence). Those are status, not words, and the daemon must strip them or they
