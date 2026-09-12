@@ -19,10 +19,19 @@ DELAY="${WHISPR_INJECT_DELAY_MS:-0}"
 
 log() { [ -n "${WHISPR_DEBUG:-}" ] && echo "whispr-inject: $*" >&2; return 0; }
 
+# ydotool defaults to 20ms between keys plus 20ms holding each one: 40ms per
+# character, so a 94-character sentence takes 3.8s to appear. Measured on this
+# machine, 2/1 types the same sentence in 0.28s with no dropped characters,
+# while 0/0 drops about half of them -- so this is fast with margin rather than
+# as fast as possible. Raise these if characters go missing in a slow client.
+TYPE_DELAY="${WHISPR_TYPE_DELAY_MS:-2}"
+TYPE_HOLD="${WHISPR_TYPE_HOLD_MS:-1}"
+
 if command -v ydotool >/dev/null 2>&1; then
     SOCK="${YDOTOOL_SOCKET:-${XDG_RUNTIME_DIR:-/tmp}/.ydotool_socket}"
     if [ -S "$SOCK" ]; then
-        if printf '%s' "$TEXT" | YDOTOOL_SOCKET="$SOCK" ydotool type --file - 2>/dev/null; then
+        if printf '%s' "$TEXT" | YDOTOOL_SOCKET="$SOCK" \
+               ydotool type -d "$TYPE_DELAY" -H "$TYPE_HOLD" --file - 2>/dev/null; then
             log "ydotool"; exit 0
         fi
     else

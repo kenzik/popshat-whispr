@@ -51,4 +51,7 @@ idle_unload_seconds = 600
 
 append_space        = true
 inject_cmd          = whispr-inject
+# Typing speed is set in whispr-inject via WHISPR_TYPE_DELAY_MS (default 2) and
+# WHISPR_TYPE_HOLD_MS (default 1). ydotool's own defaults are 20/20, which is
+# 40ms per character -- nearly 4 seconds for one sentence.
 notify_cmd          = whispr-notify
