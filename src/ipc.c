@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -107,6 +108,8 @@ int
 ipc_listen(const char *path)
 {
   struct sockaddr_un addr;
+  mode_t prev;
+  int rc;
   int fd;
 
   if(strlen(path) >= sizeof addr.sun_path)
@@ -136,7 +139,19 @@ ipc_listen(const char *path)
   addr.sun_family = AF_UNIX;
   strlcpy(addr.sun_path, path, sizeof addr.sun_path);
 
-  if(bind(fd, (struct sockaddr *)&addr, sizeof addr) != 0 || listen(fd, 16) != 0)
+  // Create the socket 0600. A bare bind() leaves it 0777-minus-umask, and when
+  // XDG_RUNTIME_DIR is unset -- a system without a systemd user manager -- the
+  // path falls back to /tmp, where any local user could then connect and drive
+  // the daemon. "stop" is the interesting one: it transcribes and types the
+  // result into whatever window the real user has focused.
+  //
+  // umask rather than a chmod after bind, which would leave the socket briefly
+  // open to everyone.
+  prev = umask(0177);
+  rc   = bind(fd, (struct sockaddr *)&addr, sizeof addr);
+  umask(prev);
+
+  if(rc != 0 || listen(fd, 16) != 0)
   {
     int e = errno;
 
