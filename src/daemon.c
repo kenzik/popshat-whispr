@@ -165,6 +165,45 @@ spawn_with_stdin(const char *cmd, const char *const *extra, const char *text)
     argv[i] = NULL;
 
     execvp(cmd, (char *const *)argv);
+
+    // Not on PATH. The helpers are installed alongside the daemon, so look
+    // there before giving up: systemd's user-manager PATH does not include
+    // ~/.local/bin, which made both helpers fail here silently -- no typing, no
+    // sound, no notification, and nothing in the journal to say why.
+    if(!strchr(cmd, '/'))
+    {
+      char self[WHISPR_PATH_MAX];
+      ssize_t n = readlink("/proc/self/exe", self, sizeof self - 1);
+
+      if(n > 0)
+      {
+        char *slash = NULL;
+
+        self[n] = '\0';
+        slash = strrchr(self, '/');
+
+        if(slash)
+        {
+          char alt[WHISPR_PATH_MAX];
+
+          *slash = '\0';
+
+          // Built with bounded appends so truncation is a checked condition
+          // rather than a silently shortened path we would then try to exec.
+          if(strlcpy(alt, self, sizeof alt) < sizeof alt &&
+             strlcat(alt, "/",  sizeof alt) < sizeof alt &&
+             strlcat(alt, cmd,  sizeof alt) < sizeof alt)
+          {
+            argv[0] = alt;
+            execv(alt, (char *const *)argv);
+          }
+        }
+      }
+    }
+
+    // Reached only if every exec failed. Say so: a helper that cannot start is
+    // indistinguishable from one that ran and did nothing.
+    fprintf(stderr, "whispr: cannot exec %s: %s\n", cmd, strerror(errno));
     _exit(127);
   }
 
