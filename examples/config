@@ -15,6 +15,14 @@ whisper.translate   = false
 # cheapest accuracy lever available, so put your own vocabulary here.
 whisper.initial_prompt = CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulkan, systemd, Keychron
 
+# Voice activity detection. Leave this on. Without it Whisper invents plausible
+# text from room tone -- observed emitting "(dramatic music)", "Get a Clospe."
+# and once "Fuck you!" from a silent room -- and whispr types it into whatever
+# window has focus. Silero segments the audio first, so silence reaches the
+# decoder as nothing at all.
+whisper.vad         = true
+whisper.vad_model   = ~/.local/share/whispr/models/ggml-silero-v5.1.2.bin
+
 parakeet.model      =
 
 # Empty means the default input device.
@@ -26,6 +34,17 @@ max_record_seconds  = 120
 
 # Shorter than this is a stray tap, not dictation -- dropped silently.
 min_record_ms       = 300
+
+# Discard this much audio from the start of every recording. The start cue is
+# played through the speakers while the microphone is already open, so whispr
+# would otherwise record and transcribe its own beep -- VAD does not filter it,
+# a beep being acoustically close enough to speech to survive. The cue is also
+# your signal to start talking, so nothing intentional is lost here.
+skip_start_ms       = 300
+
+# Belt and braces below VAD: audio quieter than this never reaches the model.
+min_rms_dbfs        = -50.0
+max_no_speech       = 0.6
 
 # Drop the model this long after the last utterance to give the memory back.
 idle_unload_seconds = 600

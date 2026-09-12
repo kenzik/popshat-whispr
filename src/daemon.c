@@ -394,6 +394,25 @@ finish_recording(daemon_t *d, bool inject)
   d->cap = NULL;
 
   disarm_timer(d->maxfd);
+
+  // Drop the cue window (see config.c). Without this whispr transcribes its own
+  // start beep, which VAD does not filter -- a beep is acoustically close
+  // enough to speech to survive it.
+  if(d->cfg.skip_start_ms > 0)
+  {
+    size_t skip = (size_t)((double)d->cfg.skip_start_ms / 1000.0 * (double)WHISPR_SAMPLE_RATE);
+
+    if(d->pcm.n > skip)
+    {
+      memmove(d->pcm.samples, d->pcm.samples + skip,
+              (d->pcm.n - skip) * sizeof *d->pcm.samples);
+      d->pcm.n -= skip;
+    }
+
+    else
+      d->pcm.n = 0;
+  }
+
   secs = pcm_seconds(&d->pcm);
 
   if(!inject)
@@ -413,6 +432,20 @@ finish_recording(daemon_t *d, bool inject)
     pcm_free(&d->pcm);
     d->state = ST_IDLE;
     arm_timer(d->idlefd, d->cfg.idle_unload_seconds);
+
+    return;
+  }
+
+  // First line of defence against hallucination, and the cheapest: audio with
+  // no energy in it cannot contain speech, so never hand it to the model.
+  // Without this, a muted or wrong input device makes whispr type invented
+  // sentences into whatever window is focused.
+  if(pcm_rms_dbfs(&d->pcm) < d->cfg.min_rms_dbfs)
+  {
+    pcm_free(&d->pcm);
+    d->state = ST_IDLE;
+    arm_timer(d->idlefd, d->cfg.idle_unload_seconds);
+    notify(d, "empty", NULL);
 
     return;
   }

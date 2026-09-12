@@ -28,8 +28,12 @@ note() {
 }
 
 case "$EVENT" in
-    start)   play message;      note "Recording" "" 60000 ;;
-    stop)    play bell;         note "Transcribing..." "" 10000 ;;
+    # bell (139ms) rather than message (311ms): the start cue is played
+    # while the microphone is already open, so its length is dead time the
+    # daemon has to discard (skip_start_ms). Keep it short.
+    start)   play bell;         note "Recording" "" 20000 ;;
+    # stop fires after capture ends, so its length costs nothing.
+    stop)    play message;      note "Transcribing..." "" 10000 ;;
     done)    TEXT="$(cut -c1-120)"; note "Transcribed" "$TEXT" 2500 ;;
     empty)   note "No speech detected" "" 1500 ;;
     cancel)  note "Cancelled" "" 1200 ;;

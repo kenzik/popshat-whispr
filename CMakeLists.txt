@@ -20,7 +20,7 @@ add_executable(whispr
   src/config.c)
 
 target_include_directories(whispr PRIVATE src)
-target_link_libraries(whispr PRIVATE whisper Threads::Threads)
+target_link_libraries(whispr PRIVATE whisper Threads::Threads m)
 
 # pipe2/accept4/SOCK_CLOEXEC are GNU extensions; -std=gnu11 alone does not expose them.
 target_compile_definitions(whispr PRIVATE _GNU_SOURCE)

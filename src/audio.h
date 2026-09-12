@@ -33,6 +33,10 @@ void audio_free(audio_cap_t *);
 void pcm_free(pcm_buf_t *);
 double pcm_seconds(const pcm_buf_t *);
 
+// RMS level in dBFS. Speech runs about -35..-12; room tone sits below -50.
+// Returns -INFINITY for an empty buffer.
+double pcm_rms_dbfs(const pcm_buf_t *);
+
 #ifdef AUDIO_INTERNAL
 struct audio_cap
 {

@@ -35,8 +35,28 @@ config_defaults(whispr_config_t *c)
           "CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulkan, systemd, Keychron",
           sizeof c->whisper_initial_prompt);
 
+  // VAD is on by default because without it Whisper invents speech from room
+  // tone, and this tool types the result into the focused window.
+  c->whisper_vad = true;
+
+  if(home)
+    snprintf(c->whisper_vad_model, sizeof c->whisper_vad_model,
+             "%s/.local/share/whispr/models/ggml-silero-v5.1.2.bin", home);
+
   c->max_record_seconds  = 120;
   c->min_record_ms       = 300;
+  // The start cue plays through the speakers while the mic is already open,
+  // so whispr records its own beep and Whisper transcribes it as words --
+  // observed emitting "Get a Clospe." into a silent room. Discard the cue
+  // window. The cue is also the signal to start talking, so by construction
+  // nothing intentional is spoken during it.
+  c->skip_start_ms       = 300;
+  // Whisper invents plausible text from near-silence -- observed emitting
+  // "(dramatic music)" and "Fuck you!" from room tone. In a tool that types
+  // into the focused window that is far worse than transcribing nothing, so
+  // audio below this level is never sent to the model at all.
+  c->min_rms_dbfs        = -50.0;
+  c->max_no_speech       = 0.6;
   c->idle_unload_seconds = 600;
   c->append_space        = true;
 
@@ -125,11 +145,41 @@ config_apply(whispr_config_t *c, const char *k, const char *v)
   if(!strcmp(k, "use_gpu"))      return(config_parse_bool(v, &c->use_gpu));
   if(!strcmp(k, "append_space")) return(config_parse_bool(v, &c->append_space));
   if(!strcmp(k, "whisper.translate")) return(config_parse_bool(v, &c->whisper_translate));
+  if(!strcmp(k, "whisper.vad"))      return(config_parse_bool(v, &c->whisper_vad));
+
+  if(!strcmp(k, "whisper.vad_model"))
+  {
+    strlcpy(c->whisper_vad_model, v, sizeof c->whisper_vad_model);
+    config_expand_home(c->whisper_vad_model, sizeof c->whisper_vad_model);
+
+    return(true);
+  }
 
   if(!strcmp(k, "gpu_device"))          return(config_parse_int(v, &c->gpu_device));
   if(!strcmp(k, "n_threads"))           return(config_parse_int(v, &c->n_threads));
   if(!strcmp(k, "max_record_seconds"))  return(config_parse_int(v, &c->max_record_seconds));
   if(!strcmp(k, "min_record_ms"))       return(config_parse_int(v, &c->min_record_ms));
+  if(!strcmp(k, "skip_start_ms"))       return(config_parse_int(v, &c->skip_start_ms));
+
+  if(!strcmp(k, "min_rms_dbfs") || !strcmp(k, "max_no_speech"))
+  {
+    char *end = NULL;
+    double d;
+
+    errno = 0;
+    d = strtod(v, &end);
+
+    if(errno != 0 || end == v || *end != '\0')
+      return(false);
+
+    if(!strcmp(k, "min_rms_dbfs"))
+      c->min_rms_dbfs = d;
+
+    else
+      c->max_no_speech = d;
+
+    return(true);
+  }
   if(!strcmp(k, "idle_unload_seconds")) return(config_parse_int(v, &c->idle_unload_seconds));
 
   if(!strcmp(k, "whisper.model"))

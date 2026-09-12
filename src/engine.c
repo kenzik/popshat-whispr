@@ -166,6 +166,24 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
   p.print_timestamps = false;
   p.single_segment   = false;
 
+  // Whisper will confabulate speech from room tone. suppress_nst drops the
+  // non-speech tokens ("(dramatic music)"), and no_speech_thold lets the
+  // decoder itself bail on a segment it does not believe contains speech.
+  p.suppress_nst     = true;
+  p.no_speech_thold  = (float)e->cfg->max_no_speech;
+
+  // Voice activity detection is the only one of these that reliably works. An
+  // energy gate cannot separate a -32 dB noise floor from quiet speech, and the
+  // decoder's own no_speech_prob still passed "and" through from pure noise.
+  // Silero segments the audio first, so a recording with no speech in it
+  // reaches the decoder as nothing at all.
+  if(e->cfg->whisper_vad && e->cfg->whisper_vad_model[0])
+  {
+    p.vad            = true;
+    p.vad_model_path = e->cfg->whisper_vad_model;
+    p.vad_params     = whisper_vad_default_params();
+  }
+
   if(e->cfg->whisper_language[0] && strcmp(e->cfg->whisper_language, "auto"))
     p.language = e->cfg->whisper_language;
 
@@ -175,6 +193,15 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
   if(whisper_full(e->wctx, p, pcm, (int)n) != 0)
     return(false);
 
+  // With VAD on, zero speech segments is the definitive answer: nothing was
+  // said, so emit nothing rather than whatever the decoder would invent.
+  if(p.vad && whisper_full_n_vad_segments(e->wctx) == 0)
+  {
+    *out_text = calloc(1, 1);
+
+    return(*out_text != NULL);
+  }
+
   segs = whisper_full_n_segments(e->wctx);
 
   for(i = 0; i < segs; i++)
@@ -183,6 +210,12 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
     size_t slen;
 
     if(!s)
+      continue;
+
+    // Second line of defence: discard any segment the model itself rates as
+    // probably-not-speech. Typing a hallucination into the focused window is
+    // worse than typing nothing, so this errs toward dropping.
+    if(whisper_full_get_segment_no_speech_prob(e->wctx, i) > (float)e->cfg->max_no_speech)
       continue;
 
     slen = strlen(s);

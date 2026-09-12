@@ -11,6 +11,7 @@
 #include <sys/prctl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -78,6 +79,26 @@ double
 pcm_seconds(const pcm_buf_t *b)
 {
   return((double)b->n / (double)WHISPR_SAMPLE_RATE);
+}
+
+double
+pcm_rms_dbfs(const pcm_buf_t *b)
+{
+  double sum = 0.0;
+  size_t i;
+
+  if(b->n == 0)
+    return(-INFINITY);
+
+  for(i = 0; i < b->n; i++)
+    sum += (double)b->samples[i] * (double)b->samples[i];
+
+  sum = sqrt(sum / (double)b->n);
+
+  if(sum <= 0.0)
+    return(-INFINITY);
+
+  return(20.0 * log10(sum));
 }
 
 audio_cap_t *

@@ -25,12 +25,17 @@ typedef struct
   char whisper_language[16];
   bool whisper_translate;
   char whisper_initial_prompt[WHISPR_PROMPT_MAX];
+  bool whisper_vad;
+  char whisper_vad_model[WHISPR_PATH_MAX];
 
   char parakeet_model[WHISPR_PATH_MAX];
 
   char source[256];
   int  max_record_seconds;
   int  min_record_ms;
+  int  skip_start_ms;
+  double min_rms_dbfs;
+  double max_no_speech;
   int  idle_unload_seconds;
   bool append_space;
   char inject_cmd[WHISPR_PATH_MAX];
