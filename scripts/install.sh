@@ -23,21 +23,38 @@ command -v ydotool   >/dev/null || warn "ydotool not installed -- text will land
 
 if [ ${#missing[@]} -gt 0 ]; then
     echo "Missing: ${missing[*]}" >&2
-    echo "On Arch/CachyOS:  sudo pacman -S --needed cmake base-devel git ydotool vulkan-headers" >&2
+    echo "On Arch/CachyOS:  sudo pacman -S --needed cmake base-devel git ydotool \\" >&2
+    echo "                       vulkan-headers spirv-headers glslang shaderc" >&2
     exit 1
 fi
 
 # ---------------------------------------------------------------------- build
 say "Building"
-VULKAN=OFF
-if [ -f /usr/include/vulkan/vulkan.h ]; then
-    VULKAN=ON
-else
-    warn "vulkan-headers not installed -- building CPU-only (install it and re-run for GPU)"
-fi
-
 git -C "$ROOT" submodule update --init --recursive
-cmake -S "$ROOT" -B "$ROOT/build" -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=$VULKAN
+
+# Probe for Vulkan by attempting the configure rather than sniffing for a
+# header. ggml's Vulkan backend needs vulkan-headers, spirv-headers, glslang and
+# shaderc, and checking for one of them only moves the failure later -- as a
+# vulkan.h check did, which passed and then died on missing SPIRV-Headers.
+# GPU support is an optimisation, so failing to get it must never fail install.
+CFGLOG="$(mktemp)"
+say "Configuring with Vulkan"
+if cmake -S "$ROOT" -B "$ROOT/build" -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON >"$CFGLOG" 2>&1; then
+    say "Vulkan enabled"
+else
+    warn "Vulkan unavailable -- falling back to CPU."
+    if grep -q 'SPIRV-Headers' "$CFGLOG"; then
+        warn "  Missing SPIRV-Headers. On Arch/CachyOS:  sudo pacman -S spirv-headers"
+    else
+        warn "  Missing one of: vulkan-headers spirv-headers glslang shaderc"
+        warn "  Details: $CFGLOG"
+    fi
+    warn "  CPU is fully functional -- install the package and re-run for GPU."
+    rm -rf "$ROOT/build"
+    cmake -S "$ROOT" -B "$ROOT/build" -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=OFF
+fi
+rm -f "$CFGLOG"
+
 cmake --build "$ROOT/build" -j"$(nproc)" --target whispr
 
 # ---------------------------------------------------------------------- model
