@@ -8,7 +8,10 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FIX="$ROOT/tests/fixtures"
-CLI="${WHISPER_CLI:-$ROOT/vendor/whisper.cpp/build/bin/whisper-cli}"
+# Prefer the project build: it is the one configured the way the daemon is
+# (Vulkan where available), so the suite measures the real backend.
+CLI="${WHISPER_CLI:-$ROOT/build/bin/whisper-cli}"
+[ -x "$CLI" ] || CLI="$ROOT/vendor/whisper.cpp/build/bin/whisper-cli"
 MODEL="${WHISPER_MODEL:-$HOME/.local/share/whispr/models/ggml-base.en.bin}"
 # Ship the same vocabulary prompt the daemon uses, so the suite measures what
 # production actually does. Empirically this took jargon WER 0.42 -> 0.16 on

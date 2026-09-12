@@ -97,7 +97,18 @@ if [ ! -f /etc/udev/rules.d/99-whispr-uinput.rules ]; then
     echo 'KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' \
         | sudo tee /etc/udev/rules.d/99-whispr-uinput.rules >/dev/null
     sudo udevadm control --reload-rules
-    sudo udevadm trigger /dev/uinput || true
+    # The node exists via static_node= even with the module unloaded, so a
+    # trigger before first open reports ENODEV ("No such device") and looks like
+    # a failure when nothing is wrong. Load it explicitly instead, and make it
+    # survive reboot rather than relying on autoload-on-open.
+    sudo modprobe uinput 2>/dev/null || true
+    echo uinput | sudo tee /etc/modules-load.d/whispr-uinput.conf >/dev/null
+    sudo udevadm trigger /dev/uinput 2>/dev/null || true
+fi
+
+if [ ! -w /dev/uinput ]; then
+    warn "/dev/uinput is not writable -- text will land on the clipboard instead."
+    warn "  A re-login usually applies the new rule."
 fi
 
 # ------------------------------------------------------------------- services
