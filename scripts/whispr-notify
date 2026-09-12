@@ -37,6 +37,9 @@ case "$EVENT" in
     done)    TEXT="$(cut -c1-120)"; note "Transcribed" "$TEXT" 2500 ;;
     empty)   note "No speech detected" "" 1500 ;;
     cancel)  note "Cancelled" "" 1200 ;;
+    # Takes down the Recording toast without putting anything in its place:
+    # the synchronous hint makes it replace, and a 1ms timeout expires it.
+    dismiss) note " " "" 1 ;;
     timeout) play dialog-warning; note "Recording timed out" "Hit the max duration." 3000 ;;
     error)   TEXT="$(cut -c1-160)"; play dialog-error; note "whispr error" "$TEXT" 4000 ;;
     *)       : ;;

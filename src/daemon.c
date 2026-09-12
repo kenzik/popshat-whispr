@@ -425,13 +425,17 @@ finish_recording(daemon_t *d, bool inject)
     return;
   }
 
-  // Too short to be speech: a stray tap, not dictation. Say nothing rather
-  // than notify, or the hotkey becomes noisy to brush against.
+  // Too short to be speech: a stray tap, not dictation. Report nothing the user
+  // has to read -- but the "Recording" toast is still on screen and every exit
+  // from RECORDING must take it down, or a brushed key leaves a recording
+  // indicator up long after nothing is being recorded. "dismiss" replaces it
+  // with a notification that expires immediately.
   if(secs * 1000.0 < (double)d->cfg.min_record_ms)
   {
     pcm_free(&d->pcm);
     d->state = ST_IDLE;
     arm_timer(d->idlefd, d->cfg.idle_unload_seconds);
+    notify(d, "dismiss", NULL);
 
     return;
   }
