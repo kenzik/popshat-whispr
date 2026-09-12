@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # CPU is a supported configuration, not a fallback, so it is the one
+          # that must never break.
+          - { name: cpu,    vulkan: "OFF" }
+          # The GPU path is an optimisation, but a build error in it would only
+          # ever be found by a user with the headers installed.
+          - { name: vulkan, vulkan: "ON" }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Install Vulkan toolchain
+        if: matrix.vulkan == 'ON'
+        run: sudo apt-get install -y libvulkan-dev spirv-headers glslang-tools libshaderc-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=${{ matrix.vulkan }}
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)" --target whispr
+
+      # Static by default: the installed binary must keep working after the
+      # clone is deleted, so a stray RUNPATH into the build tree is a bug.
+      - name: Assert the binary is self-contained
+        run: |
+          ./build/whispr --version
+          ./build/whispr --help
+          if readelf -d build/whispr | grep -qiE 'rpath|runpath'; then
+            echo "::error::binary has a RUNPATH; it will break when the build tree is removed"
+            readelf -d build/whispr | grep -iE 'rpath|runpath'
+            exit 1
+          fi
+          if ldd build/whispr | grep -qE 'libwhisper|libggml|libparakeet'; then
+            echo "::error::binary links whisper.cpp dynamically; expected a static build"
+            exit 1
+          fi
+
+  shell:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      # The helpers run on every utterance and the installer runs on machines
+      # nobody here has seen, so a quoting bug in them is worse than one in C.
+      #
+      # -S error only. The scripts have not been audited against shellcheck's
+      # warnings yet; gating on them now would fail the build for style rather
+      # than for bugs. Tighten this to -S warning once they are clean -- same
+      # ratchet rule as the WER thresholds.
+      - name: Check scripts
+        run: |
+          shellcheck -S error \
+            scripts/install.sh \
+            scripts/probe-keys.sh \
+            scripts/diag-key.sh \
+            scripts/acceptance.sh \
+            tests/run-tests.sh \
+            tests/record-fixtures.sh
+          shellcheck -S error -s sh \
+            scripts/whispr-inject \
+            scripts/whispr-notify \
+            scripts/whispr-doctor

@@ -288,8 +288,8 @@ default and we've lost nothing.
 3. **Unit tests** — `tests/run-tests.sh` passes WER thresholds on all three fixtures.
 4. **Capture + transcribe** — `whispr daemon --foreground --no-inject`, then
    `whispr start; sleep 3; whispr stop`; transcript prints to stdout.
-5. **Injection** — `echo "hello world" | whispr-inject` into a terminal, a browser address bar,
-   and an Electron app. Confirm the clipboard is untouched on the ydotool path.
+5. **Injection** — `echo "hello world" | whispr-inject` into a terminal and a text editor.
+   Confirm the clipboard is untouched on the ydotool path.
 6. **End-to-end** — hold F13 in a text editor, speak, release; then tap F14, speak, tap F14.
 7. **Latency** — daemon logs per-stage ms (capture / model load / encode / decode / inject).
 8. **Robustness** — `start` with no `stop` (watchdog fires at `max_record_seconds`); `kill` the

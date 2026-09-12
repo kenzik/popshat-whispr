@@ -9,12 +9,26 @@
 #   wev sees it + no state change  -> the bind is NOT matching this key
 #   wev silent  + no state change  -> bind matched, the exec failed
 #   wev silent  + state change     -> working
+#
+# HYPRLAND ONLY. The whole trick depends on Hyprland consuming a key it has a
+# bind for; a compositor that forwards the key regardless makes the two cases
+# indistinguishable. Elsewhere, answer the same question by hand: if
+# "whispr toggle" in a terminal works but the key does nothing, the bind is the
+# problem -- and it is nearly always PATH or the keysym name.
 set -uo pipefail
 
 WLOG=/tmp/whispr-diag-wev.log
 SLOG=/tmp/whispr-diag-state.log
 SECS="${1:-20}"
 WHISPR="$HOME/.local/bin/whispr"
+
+command -v hyprctl >/dev/null 2>&1 || {
+    echo "diag-key.sh only works under Hyprland." >&2
+    echo "Elsewhere: run 'whispr toggle' in a terminal. If that works, the" >&2
+    echo "daemon is fine and the binding is the problem -- check the keysym" >&2
+    echo "with scripts/probe-keys.sh and use an absolute path in the bind." >&2
+    exit 1
+}
 
 : > "$WLOG"; : > "$SLOG"
 
@@ -24,7 +38,8 @@ cat <<EOF
   ────────────────────────────────────────────────────────────
   A window opens and takes focus. For the next ${SECS}s:
 
-      HOLD the circle key for ~2 seconds, release. Do that twice.
+      HOLD your push-to-talk key for ~2 seconds, release.
+      Do that twice.
 
   Do not click away.
   ────────────────────────────────────────────────────────────
@@ -79,7 +94,8 @@ elif [ "$SAW" = yes ]; then
 else
     echo "    Hyprland consumed the key but the daemon never saw it:"
     echo "    the bind matched and the exec failed."
-    echo "    -> check the command path in ~/.config/hypr/config/whispr.lua"
+    echo "    -> check the command path in your Hyprland config;"
+    echo "       binds need an absolute path to whispr."
 fi
 echo
 echo "  logs: $WLOG  $SLOG"

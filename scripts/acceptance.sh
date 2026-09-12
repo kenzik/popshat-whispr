@@ -39,7 +39,8 @@ cat <<'EOF'
       transcribe anything audible in it)
     - stay in this terminal; nothing will be typed into it
 
-  Keys:  circle = hold to talk    triangle = toggle    X = cancel
+  Keys:  whichever you bound -- referred to below as
+         PTT (hold to talk), TOGGLE, and CANCEL
   ════════════════════════════════════════════════════════════
 EOF
 read -rp "  Enter when ready... " _
@@ -82,22 +83,22 @@ step() { # step <title> <instruction> <expectation: EMPTY|TEXT> [expected text]
 }
 
 step "1/5  Silence" \
-     "HOLD circle for ~3 seconds. Say NOTHING. Release." EMPTY
+     "HOLD your PTT key for ~3 seconds. Say NOTHING. Release." EMPTY
 
 step "2/5  Speech, push-to-talk" \
-     "HOLD circle, say: \"the quick brown fox jumps over the lazy dog\", release." \
+     "HOLD PTT, say: \"the quick brown fox jumps over the lazy dog\", release." \
      TEXT "the quick brown fox jumps over the lazy dog"
 
 step "3/5  First word not clipped" \
-     "HOLD circle and start speaking IMMEDIATELY: \"alpha bravo charlie delta\". Release." \
+     "HOLD PTT and start speaking IMMEDIATELY: \"alpha bravo charlie delta\". Release." \
      TEXT "alpha bravo charlie delta"
 
 step "4/5  Toggle mode" \
-     "TAP triangle, say \"testing one two three\", TAP triangle again." \
+     "TAP TOGGLE, say \"testing one two three\", TAP TOGGLE again." \
      TEXT "testing one two three"
 
 step "5/5  Cancel" \
-     "HOLD circle, say \"this should be discarded\", tap X, then release circle." EMPTY
+     "HOLD PTT, say \"this should be discarded\", tap CANCEL, then release PTT." EMPTY
 
 say "── result ──────────────────────────────────────────────"
 note "$PASS passed, $FAIL failed"

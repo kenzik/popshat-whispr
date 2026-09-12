@@ -1,0 +1,65 @@
+name: Platform report
+description: It works (or does not) on a distro or compositor that is not listed
+labels: [platform]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        whispr has only been verified on one setup: CachyOS, Hyprland, PipeWire,
+        Vulkan. Everything else in the docs follows from the design but has not
+        been run. A report either way is a real contribution — "works on Fedora
+        + sway" is as useful as a bug.
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      placeholder: Fedora 41, Debian 13, Alpine 3.21, NixOS unstable...
+    validations:
+      required: true
+
+  - type: input
+    id: wm
+    attributes:
+      label: Compositor or window manager
+      placeholder: sway 1.9, river 0.3, KDE Plasma 6, i3 + sxhkd...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - Works
+        - Builds and runs, but something is wrong
+        - Does not build
+        - Builds, but the keybinding never fires
+        - Builds, but nothing is ever typed
+    validations:
+      required: true
+
+  - type: textarea
+    id: packages
+    attributes:
+      label: Packages you actually had to install
+      description: >
+        The per-distro lists in docs/install.md are taken from each
+        distribution's package index, not tested. Corrections go straight in.
+      render: text
+
+  - type: textarea
+    id: binding
+    attributes:
+      label: Working keybinding snippet
+      description: >
+        If you got it working, the exact config lines. These go into
+        wm/README.md with your compositor marked as verified.
+      render: text
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: "`whispr-doctor` output is welcome here too."
+      render: text

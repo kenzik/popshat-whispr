@@ -1,0 +1,67 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before anything else, please run `whispr-doctor` and paste the output
+        below. It answers most of what would otherwise be a round trip of
+        questions, and it is what catches the two most common causes by far:
+        `~/.local/bin` missing from `PATH`, and the systemd user manager not
+        knowing about your display.
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: whispr-doctor output
+      description: >
+        Paste the whole thing. It prints your home directory as `~` and does not
+        print `whisper.initial_prompt`, so it is safe to share.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: input
+    id: wm
+    attributes:
+      label: Window manager / desktop
+      placeholder: Hyprland 0.42, sway 1.9, GNOME 46, KDE Plasma 6...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode
+      options:
+        - push-to-talk (start/stop)
+        - hands-free (dictate)
+        - toggle
+        - not sure / all of them
+    validations:
+      required: true
+
+  - type: textarea
+    id: binding
+    attributes:
+      label: Your keybinding
+      description: >
+        The lines from your WM config. If nothing happens at all when you press
+        the key, this and `PATH` are almost always where the problem is.
+      render: text
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Daemon log
+      description: "`journalctl --user -u whispr -n 50`, or the output of `whispr daemon -v --no-inject`"
+      render: text

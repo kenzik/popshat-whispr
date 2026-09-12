@@ -2,10 +2,9 @@
 # Type stdin into the focused window.
 #
 # Backends are tried in order of fidelity. Typing is preferred over the
-# clipboard because it works in terminals, browsers and Electron alike and
-# leaves the user's clipboard alone; the clipboard is the last resort, not the
-# default, precisely because clobbering it is a side effect they did not ask
-# for.
+# clipboard because it works in any focused window and leaves the user's
+# clipboard alone; the clipboard is the last resort, not the default, precisely
+# because clobbering it is a side effect they did not ask for.
 set -u
 
 TEXT="$(cat)"
@@ -13,7 +12,7 @@ TEXT="$(cat)"
 
 # Only needed if push-to-talk is ever moved onto a modified key: releasing the
 # combo can leave a modifier physically down, turning typed characters into
-# window-manager shortcuts. F13/F14 are modifier-free, so this defaults to 0.
+# window-manager shortcuts. whispr expects a modifier-free key, so this is 0.
 DELAY="${WHISPR_INJECT_DELAY_MS:-0}"
 [ "$DELAY" -gt 0 ] 2>/dev/null && sleep "$(awk "BEGIN{print $DELAY/1000}")"
 
