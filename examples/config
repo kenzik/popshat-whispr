@@ -23,7 +23,7 @@ whisper.initial_prompt = CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulk
 whisper.vad         = true
 whisper.vad_model   = ~/.local/share/whispr/models/ggml-silero-v5.1.2.bin
 
-parakeet.model      =
+parakeet.model      = ~/.local/share/whispr/models/ggml-parakeet-tdt-0.6b-v3-f16.bin
 
 # Empty means the default input device.
 source              =

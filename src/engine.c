@@ -9,11 +9,13 @@
 #include <string.h>
 
 #include "whisper.h"
+#include "parakeet.h"
 
 struct engine
 {
-  const whispr_config_t *cfg;
-  struct whisper_context *wctx;
+  const whispr_config_t  *cfg;
+  struct whisper_context  *wctx;
+  struct parakeet_context *pctx;
 };
 
 engine_t *
@@ -41,7 +43,7 @@ engine_name(const engine_t *e)
 bool
 engine_is_loaded(const engine_t *e)
 {
-  return(e->wctx != NULL);
+  return(e->wctx != NULL || e->pctx != NULL);
 }
 
 bool
@@ -49,14 +51,31 @@ engine_load(engine_t *e)
 {
   struct whisper_context_params cp;
 
-  if(e->wctx)
+  if(engine_is_loaded(e))
     return(true);
 
   if(e->cfg->engine == WHISPR_ENGINE_PARAKEET)
   {
-    fprintf(stderr, "whispr: parakeet engine not built in yet; set engine = whisper\n");
+    struct parakeet_context_params pp = { .use_gpu = e->cfg->use_gpu,
+                                          .gpu_device = e->cfg->gpu_device };
 
-    return(false);
+    if(!e->cfg->parakeet_model[0])
+    {
+      fprintf(stderr, "whispr: engine = parakeet but parakeet.model is unset\n");
+
+      return(false);
+    }
+
+    e->pctx = parakeet_init_from_file_with_params(e->cfg->parakeet_model, pp);
+
+    if(!e->pctx)
+    {
+      fprintf(stderr, "whispr: failed to load model: %s\n", e->cfg->parakeet_model);
+
+      return(false);
+    }
+
+    return(true);
   }
 
   cp = whisper_context_default_params();
@@ -78,11 +97,17 @@ engine_load(engine_t *e)
 void
 engine_unload(engine_t *e)
 {
-  if(!e->wctx)
-    return;
+  if(e->pctx)
+  {
+    parakeet_free(e->pctx);
+    e->pctx = NULL;
+  }
 
-  whisper_free(e->wctx);
-  e->wctx = NULL;
+  if(e->wctx)
+  {
+    whisper_free(e->wctx);
+    e->wctx = NULL;
+  }
 }
 
 void
@@ -141,6 +166,84 @@ engine_clean_text(char *s)
     s[--len] = '\0';
 }
 
+// Appends one segment to a growable string. Returns false only on allocation
+// failure, in which case *text is freed and set NULL.
+static bool
+append_segment(char **text, size_t *cap, size_t *used, const char *s)
+{
+  size_t slen = strlen(s);
+
+  if(*used + slen + 1 > *cap)
+  {
+    size_t want = *cap ? *cap : 256;
+    char *bigger = NULL;
+
+    while(want < *used + slen + 1)
+      want *= 2;
+
+    bigger = realloc(*text, want);
+
+    if(!bigger)
+    {
+      free(*text);
+      *text = NULL;
+
+      return(false);
+    }
+
+    *text = bigger;
+    *cap = want;
+  }
+
+  memcpy(*text + *used, s, slen);
+  *used += slen;
+  (*text)[*used] = '\0';
+
+  return(true);
+}
+
+static bool
+engine_transcribe_parakeet(engine_t *e, const float *pcm, size_t n, char **out_text)
+{
+  struct parakeet_full_params p = parakeet_full_default_params(PARAKEET_SAMPLING_GREEDY);
+  char *text = NULL;
+  size_t cap = 0;
+  size_t used = 0;
+  int segs;
+  int i;
+
+  p.n_threads = e->cfg->n_threads;
+
+  if(parakeet_full(e->pctx, p, pcm, (int)n) != 0)
+    return(false);
+
+  segs = parakeet_full_n_segments(e->pctx);
+
+  for(i = 0; i < segs; i++)
+  {
+    const char *s = parakeet_full_get_segment_text(e->pctx, i);
+
+    if(!s)
+      continue;
+
+    if(!append_segment(&text, &cap, &used, s))
+      return(false);
+  }
+
+  if(!text)
+  {
+    text = calloc(1, 1);
+
+    if(!text)
+      return(false);
+  }
+
+  engine_clean_text(text);
+  *out_text = text;
+
+  return(true);
+}
+
 bool
 engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
 {
@@ -152,6 +255,9 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
   int i;
 
   *out_text = NULL;
+
+  if(e->pctx)
+    return(engine_transcribe_parakeet(e, pcm, n, out_text));
 
   if(!e->wctx)
     return(false);
@@ -207,7 +313,6 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
   for(i = 0; i < segs; i++)
   {
     const char *s = whisper_full_get_segment_text(e->wctx, i);
-    size_t slen;
 
     if(!s)
       continue;
@@ -218,32 +323,8 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
     if(whisper_full_get_segment_no_speech_prob(e->wctx, i) > (float)e->cfg->max_no_speech)
       continue;
 
-    slen = strlen(s);
-
-    if(used + slen + 1 > cap)
-    {
-      size_t want = cap ? cap : 256;
-      char *bigger = NULL;
-
-      while(want < used + slen + 1)
-        want *= 2;
-
-      bigger = realloc(text, want);
-
-      if(!bigger)
-      {
-        free(text);
-
-        return(false);
-      }
-
-      text = bigger;
-      cap = want;
-    }
-
-    memcpy(text + used, s, slen);
-    used += slen;
-    text[used] = '\0';
+    if(!append_segment(&text, &cap, &used, s))
+      return(false);
   }
 
   if(!text)
