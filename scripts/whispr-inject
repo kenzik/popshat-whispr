@@ -1,0 +1,58 @@
+#!/usr/bin/env sh
+# Type stdin into the focused window.
+#
+# Backends are tried in order of fidelity. Typing is preferred over the
+# clipboard because it works in terminals, browsers and Electron alike and
+# leaves the user's clipboard alone; the clipboard is the last resort, not the
+# default, precisely because clobbering it is a side effect they did not ask
+# for.
+set -u
+
+TEXT="$(cat)"
+[ -n "$TEXT" ] || exit 0
+
+# Only needed if push-to-talk is ever moved onto a modified key: releasing the
+# combo can leave a modifier physically down, turning typed characters into
+# window-manager shortcuts. F13/F14 are modifier-free, so this defaults to 0.
+DELAY="${WHISPR_INJECT_DELAY_MS:-0}"
+[ "$DELAY" -gt 0 ] 2>/dev/null && sleep "$(awk "BEGIN{print $DELAY/1000}")"
+
+log() { [ -n "${WHISPR_DEBUG:-}" ] && echo "whispr-inject: $*" >&2; return 0; }
+
+if command -v ydotool >/dev/null 2>&1; then
+    SOCK="${YDOTOOL_SOCKET:-${XDG_RUNTIME_DIR:-/tmp}/.ydotool_socket}"
+    if [ -S "$SOCK" ]; then
+        if printf '%s' "$TEXT" | YDOTOOL_SOCKET="$SOCK" ydotool type --file - 2>/dev/null; then
+            log "ydotool"; exit 0
+        fi
+    else
+        log "ydotoold socket missing at $SOCK"
+    fi
+fi
+
+if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wtype >/dev/null 2>&1; then
+    if printf '%s' "$TEXT" | wtype - 2>/dev/null; then log "wtype"; exit 0; fi
+fi
+
+if [ -n "${DISPLAY:-}" ] && command -v xdotool >/dev/null 2>&1; then
+    if printf '%s' "$TEXT" | xdotool type --clearmodifiers --file - 2>/dev/null; then
+        log "xdotool"; exit 0
+    fi
+fi
+
+# Nothing can type. Put it on the clipboard and say so -- losing the transcript
+# entirely is the one outcome worth a visible complaint.
+if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy >/dev/null 2>&1; then
+    printf '%s' "$TEXT" | wl-copy
+elif command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$TEXT" | xclip -selection clipboard
+else
+    echo "whispr: no way to inject text; transcript follows" >&2
+    printf '%s\n' "$TEXT" >&2
+    exit 1
+fi
+
+command -v notify-send >/dev/null 2>&1 && notify-send -a whispr -u normal \
+    -h string:x-canonical-private-synchronous:whispr \
+    "whispr: copied to clipboard" "No typing backend available -- paste manually."
+exit 0

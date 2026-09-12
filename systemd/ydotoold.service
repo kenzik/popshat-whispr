@@ -1,0 +1,16 @@
+[Unit]
+Description=ydotoold virtual input daemon (for whispr)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+# Runs unprivileged: /dev/uinput carries a uaccess ACL for the logged-in user.
+# whispr installs its own udev rule for that rather than depending on another
+# package's rule continuing to exist.
+ExecStart=/usr/bin/ydotoold --socket-path=%t/.ydotool_socket --socket-own=%U:%G
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

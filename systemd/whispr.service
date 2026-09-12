@@ -1,0 +1,19 @@
+[Unit]
+Description=whispr voice dictation daemon
+Documentation=https://github.com/ggml-org/whisper.cpp
+# Injection needs a compositor to type into, so the service is tied to the
+# graphical session rather than to login.
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/whispr daemon
+Restart=on-failure
+RestartSec=2
+# The model is loaded lazily and dropped when idle, so the resident footprint
+# between utterances is small.
+Nice=-5
+
+[Install]
+WantedBy=graphical-session.target

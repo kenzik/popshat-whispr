@@ -1,0 +1,35 @@
+# whispr configuration -- copy to ~/.config/whispr/config
+# Unknown keys are reported rather than ignored, so a typo is visible.
+
+engine              = whisper           # whisper | parakeet
+use_gpu             = true
+gpu_device          = 0
+n_threads           = 8
+
+whisper.model       = ~/.local/share/whispr/models/ggml-base.en.bin
+whisper.language    = en                # or "auto"
+whisper.translate   = false
+
+# Primes the decoder with terms it otherwise mangles. Measured on the test
+# fixtures this takes jargon WER from 0.42 to 0.16 on base.en -- it is the
+# cheapest accuracy lever available, so put your own vocabulary here.
+whisper.initial_prompt = CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulkan, systemd, Keychron
+
+parakeet.model      =
+
+# Empty means the default input device.
+source              =
+
+# A stuck push-to-talk is this tool's worst failure, so recording always stops
+# on its own even if the key-release event is lost.
+max_record_seconds  = 120
+
+# Shorter than this is a stray tap, not dictation -- dropped silently.
+min_record_ms       = 300
+
+# Drop the model this long after the last utterance to give the memory back.
+idle_unload_seconds = 600
+
+append_space        = true
+inject_cmd          = whispr-inject
+notify_cmd          = whispr-notify

@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+# Feedback for a recording lifecycle event. Event on argv, transcript on stdin.
+#
+# Always returns promptly: the daemon spawns this on the path to injection, so
+# a slow or hung notifier must never be able to delay the text reaching the
+# window.
+set -u
+
+EVENT="${1:-}"
+SOUNDS=/usr/share/sounds/freedesktop/stereo
+
+play() {
+    [ -r "$SOUNDS/$1.oga" ] || return 0
+    if command -v pw-play >/dev/null 2>&1; then pw-play "$SOUNDS/$1.oga" >/dev/null 2>&1 &
+    elif command -v paplay >/dev/null 2>&1; then paplay "$SOUNDS/$1.oga" >/dev/null 2>&1 &
+    fi
+    return 0
+}
+
+# One replaceable notification rather than a growing stack: the synchronous hint
+# makes each new one supersede the last.
+note() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    notify-send -a whispr -t "${3:-2000}" \
+        -h string:x-canonical-private-synchronous:whispr \
+        "$1" "${2:-}" 2>/dev/null
+    return 0
+}
+
+case "$EVENT" in
+    start)   play message;      note "Recording" "" 60000 ;;
+    stop)    play bell;         note "Transcribing..." "" 10000 ;;
+    done)    TEXT="$(cut -c1-120)"; note "Transcribed" "$TEXT" 2500 ;;
+    empty)   note "No speech detected" "" 1500 ;;
+    cancel)  note "Cancelled" "" 1200 ;;
+    timeout) play dialog-warning; note "Recording timed out" "Hit the max duration." 3000 ;;
+    error)   TEXT="$(cut -c1-160)"; play dialog-error; note "whispr error" "$TEXT" 4000 ;;
+    *)       : ;;
+esac
+exit 0
