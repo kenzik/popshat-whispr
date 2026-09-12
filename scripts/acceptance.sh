@@ -8,6 +8,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG=/tmp/whispr-accept.log
+ENGLOG=/tmp/whispr-accept-engine.log
 RESULTS=/tmp/whispr-accept-results.txt
 PASS=0; FAIL=0
 
@@ -15,8 +16,9 @@ say()  { printf '\n\033[1m%s\033[0m\n' "$*"; }
 note() { printf '  %s\n' "$*"; }
 
 transcript() {
-    grep -vE '^whisper_|^ggml_|^register_|^whispr:|^load_backend|^build:|^main:|^error:|^silero|^vad|^$' "$LOG" \
-        | tail -1 | sed 's/^ *//;s/ *$//'
+    # $LOG carries only the daemon's own stdout, so no filtering is needed and
+    # there is nothing for grep to mistake for a binary file.
+    grep -a . "$LOG" 2>/dev/null | tail -1 | sed 's/^ *//;s/ *$//'
 }
 
 cleanup() {
@@ -46,10 +48,10 @@ systemctl --user stop whispr.service 2>/dev/null
 sleep 1
 : > "$LOG"
 { printf 'whispr acceptance run %s\n\n' "$(date '+%Y-%m-%d %H:%M:%S')"; } > "$RESULTS"
-"$ROOT/build/whispr" daemon --no-inject -v > "$LOG" 2>&1 &
+"$ROOT/build/whispr" daemon --no-inject > "$LOG" 2> "$ENGLOG" &
 DP=$!
 sleep 2
-kill -0 "$DP" 2>/dev/null || { echo "  daemon failed to start; see $LOG"; exit 1; }
+kill -0 "$DP" 2>/dev/null || { echo "  daemon failed to start; see $ENGLOG"; exit 1; }
 
 step() { # step <title> <instruction> <expectation: EMPTY|TEXT> [expected text]
     local title="$1" instr="$2" want="$3" expect="${4:-}"
@@ -101,6 +103,7 @@ say "── result ────────────────────�
 note "$PASS passed, $FAIL failed"
 printf '%s passed, %s failed\n' "$PASS" "$FAIL" >> "$RESULTS"
 note "full results saved to $RESULTS"
+note "engine log: $ENGLOG"
 note ""
 note "Step 3 is the one to watch: if the first word is missing, PipeWire"
 note "source resume plus skip_start_ms is eating it, and that is fixable."
