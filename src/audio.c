@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/prctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,6 +84,7 @@ audio_cap_t *
 audio_start(const char *source)
 {
   audio_cap_t *c = NULL;
+  pid_t parent = getpid();
   int fds[2];
   size_t i;
 
@@ -117,8 +119,17 @@ audio_start(const char *source)
     if(dup2(fds[1], STDOUT_FILENO) < 0)
       _exit(127);
 
-    // A new group so a stray signal to the daemon's group cannot orphan the
-    // recorder -- the failure that produced 200-second takes during setup.
+    // Die with the daemon. Without this a SIGKILLed or crashed daemon leaves
+    // the recorder running forever with the microphone open, since the normal
+    // cleanup path never runs. Set before the group change so a parent that is
+    // already gone is caught by the getppid() check below.
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
+
+    if(getppid() != parent)
+      _exit(0);
+
+    // A new group so a stray signal to the daemon's group cannot take the
+    // recorder down mid-utterance.
     setpgid(0, 0);
 
     for(i = 0; i < sizeof audio_backends / sizeof *audio_backends; i++)
