@@ -48,6 +48,7 @@ typedef struct
   state_t           state;
   struct timespec   rec_start;
   bool              running;
+  bool              reload_pending;
 
   // Guards state, and the job handoff to the worker.
   pthread_mutex_t   lock;
@@ -382,6 +383,30 @@ finish_recording(daemon_t *d, bool inject)
   post_job(d, &d->pcm, false);
 }
 
+// Only ever called with the worker idle. The worker reads d->cfg through the
+// engine's cfg pointer for the whole of a transcription, and engine_unload()
+// frees the context it may be inside -- so swapping either mid-flight is a data
+// race and a use-after-free respectively. Deferring is why that cannot happen.
+static void
+apply_reload_when_idle(daemon_t *d)
+{
+  whispr_config_t fresh;
+  bool engine_changed;
+
+  config_defaults(&fresh);
+  config_load(&fresh, d->config_path);
+
+  engine_changed = fresh.engine != d->cfg.engine ||
+                   strcmp(fresh.whisper_model, d->cfg.whisper_model) != 0;
+  d->cfg = fresh;
+  d->reload_pending = false;
+
+  // A different model behind the same context would silently keep serving the
+  // old weights, so drop it and let the next start reload.
+  if(engine_changed)
+    engine_unload(d->engine);
+}
+
 static void
 reply_status(daemon_t *d, int fd, bool json)
 {
@@ -469,23 +494,14 @@ handle_client(daemon_t *d, int cfd)
       return;
 
     case WHISPR_CMD_RELOAD:
-    {
-      whispr_config_t fresh;
-      bool engine_changed;
+      if(d->state == ST_IDLE)
+        apply_reload_when_idle(d);
 
-      config_defaults(&fresh);
-      config_load(&fresh, d->config_path);
-      engine_changed = fresh.engine != d->cfg.engine ||
-                       strcmp(fresh.whisper_model, d->cfg.whisper_model) != 0;
-      d->cfg = fresh;
-
-      // A different model behind the same context would silently keep serving
-      // the old weights, so drop it and let the next start reload.
-      if(engine_changed)
-        engine_unload(d->engine);
+      // Busy: queue it rather than mutate config out from under the worker.
+      else
+        d->reload_pending = true;
 
       break;
-    }
   }
 
   write_reply(cfd, "ok\n");
@@ -646,6 +662,9 @@ daemon_run(const whispr_config_t *cfg, const char *config_path, const daemon_opt
           d.state = ST_IDLE;
 
         pthread_mutex_unlock(&d.lock);
+
+        if(d.reload_pending && d.state == ST_IDLE)
+          apply_reload_when_idle(&d);
 
         arm_timer(d.idlefd, d.cfg.idle_unload_seconds);
       }
