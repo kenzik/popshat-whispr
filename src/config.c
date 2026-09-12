@@ -51,6 +51,17 @@ config_defaults(whispr_config_t *c)
   // window. The cue is also the signal to start talking, so by construction
   // nothing intentional is spoken during it.
   c->skip_start_ms       = 300;
+  // Hands-free mode: stop once this much quiet has followed actual speech.
+  c->silence_stop_ms     = 2000;
+  // Hands-free waits for speech before any silence counts, so an accidental
+  // tap would otherwise hold the microphone until max_record_seconds. Give up
+  // quietly if nothing is ever said.
+  c->dictate_wait_s      = 10;
+  // Above this RMS counts as speech. Measured on this machine: room floor
+  // -31.6 dB, speech -20.7 to -14.3 dB, so -28 sits in the gap with margin
+  // either side. Lower it if dictation cuts off while you are still talking;
+  // raise it if a noisy room stops it from ever detecting silence.
+  c->voice_dbfs          = -28.0;
   // Whisper invents plausible text from near-silence -- observed emitting
   // "(dramatic music)" and "Fuck you!" from room tone. In a tool that types
   // into the focused window that is far worse than transcribing nothing, so
@@ -160,8 +171,10 @@ config_apply(whispr_config_t *c, const char *k, const char *v)
   if(!strcmp(k, "max_record_seconds"))  return(config_parse_int(v, &c->max_record_seconds));
   if(!strcmp(k, "min_record_ms"))       return(config_parse_int(v, &c->min_record_ms));
   if(!strcmp(k, "skip_start_ms"))       return(config_parse_int(v, &c->skip_start_ms));
+  if(!strcmp(k, "silence_stop_ms"))     return(config_parse_int(v, &c->silence_stop_ms));
+  if(!strcmp(k, "dictate_wait_s"))      return(config_parse_int(v, &c->dictate_wait_s));
 
-  if(!strcmp(k, "min_rms_dbfs") || !strcmp(k, "max_no_speech"))
+  if(!strcmp(k, "min_rms_dbfs") || !strcmp(k, "max_no_speech") || !strcmp(k, "voice_dbfs"))
   {
     char *end = NULL;
     double d;
@@ -174,6 +187,9 @@ config_apply(whispr_config_t *c, const char *k, const char *v)
 
     if(!strcmp(k, "min_rms_dbfs"))
       c->min_rms_dbfs = d;
+
+    else if(!strcmp(k, "voice_dbfs"))
+      c->voice_dbfs = d;
 
     else
       c->max_no_speech = d;

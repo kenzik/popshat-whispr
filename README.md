@@ -12,7 +12,7 @@ interface and lands next.
 | | |
 |---|---|
 | Engine | Whisper `base.en`, CPU |
-| Hotkeys | F13 hold = push-to-talk, F14 tap = toggle |
+| Hotkeys | circle hold = push-to-talk, square tap = hands-free, triangle tap = toggle |
 | Injection | ydotool → wtype → xdotool → clipboard |
 | Tested | WER 0.00 / 0.10 / 0.16 on the bundled fixtures |
 
@@ -32,6 +32,7 @@ it is programmable), confirm with `wev`, and add the binding snippet — see
 | Command | |
 |---|---|
 | `whispr start` / `whispr stop` | push-to-talk, bound to key press and release |
+| `whispr dictate` | hands-free: starts, then stops on its own once you go quiet |
 | `whispr toggle` | start if idle, else stop |
 | `whispr cancel` | discard without typing |
 | `whispr status [--json]` | for a bar module |

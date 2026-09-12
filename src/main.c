@@ -19,6 +19,7 @@ usage(void)
         "  start               begin recording\n"
         "  stop                end recording, transcribe, inject\n"
         "  toggle              start if idle, else stop\n"
+        "  dictate             hands-free: start, and stop on silence\n"
         "  cancel              discard the recording\n"
         "  status [--json]     report state\n"
         "  reload              re-read the config file\n"

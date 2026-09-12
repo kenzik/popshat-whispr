@@ -42,6 +42,21 @@ min_record_ms       = 300
 # your signal to start talking, so nothing intentional is lost here.
 skip_start_ms       = 300
 
+# Hands-free mode (the square key): stop this long after you stop talking.
+# Raise it if you pause mid-thought and it cuts you off.
+silence_stop_ms     = 2000
+
+# Hands-free waits for speech before any silence counts, so a stray tap would
+# otherwise hold the mic until max_record_seconds. Give up quietly after this.
+dictate_wait_s      = 10
+
+# Above this RMS counts as speech. Measured on this machine the room floor sits
+# at -31.6 dB and speech at -20.7 to -14.3 dB, so -28 falls in the gap. Lower it
+# if hands-free cuts off while you are still talking; raise it if a noisy room
+# stops it from ever detecting silence (the max_record_seconds watchdog will
+# still end the recording either way).
+voice_dbfs          = -28.0
+
 # Belt and braces below VAD: audio quieter than this never reaches the model.
 min_rms_dbfs        = -50.0
 max_no_speech       = 0.6

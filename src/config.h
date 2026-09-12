@@ -34,6 +34,9 @@ typedef struct
   int  max_record_seconds;
   int  min_record_ms;
   int  skip_start_ms;
+  int  silence_stop_ms;
+  int  dictate_wait_s;
+  double voice_dbfs;
   double min_rms_dbfs;
   double max_no_speech;
   int  idle_unload_seconds;

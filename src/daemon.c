@@ -46,6 +46,10 @@ typedef struct
   int               donefd;     // worker -> loop wakeup
 
   state_t           state;
+  // Hands-free: stop on trailing silence instead of on a key release.
+  bool              auto_stop;
+  bool              speech_seen;
+  size_t            last_voice_n;
   struct timespec   rec_start;
   bool              running;
   bool              reload_pending;
@@ -83,6 +87,8 @@ write_reply(int fd, const char *s)
       break;
   }
 }
+
+static void finish_recording(daemon_t *, bool);
 
 static double
 elapsed_since(const struct timespec *t0)
@@ -353,10 +359,14 @@ post_job(daemon_t *d, pcm_buf_t *pcm, bool want_load)
 }
 
 static void
-start_recording(daemon_t *d)
+start_recording(daemon_t *d, bool auto_stop)
 {
   if(d->state != ST_IDLE)
     return;
+
+  d->auto_stop    = auto_stop;
+  d->speech_seen  = false;
+  d->last_voice_n = 0;
 
   pcm_free(&d->pcm);
   d->cap = audio_start(d->cfg.source[0] ? d->cfg.source : NULL);
@@ -378,6 +388,46 @@ start_recording(daemon_t *d)
   // Warm the model now, concurrently with speech, rather than after the stop.
   post_job(d, NULL, true);
   notify(d, "start", NULL);
+}
+
+// Hands-free stop. Requires speech before any silence counts, so a tap into a
+// quiet room waits for you rather than transcribing nothing immediately; the
+// max_record_seconds watchdog still bounds that wait.
+static void
+check_auto_stop(daemon_t *d)
+{
+  const size_t win = WHISPR_SAMPLE_RATE / 5;  // 200ms, long enough to ride out
+                                              // a keyboard click or a breath
+  double level;
+  double quiet_ms;
+
+  if(d->pcm.n < win)
+    return;
+
+  level = pcm_rms_dbfs_range(&d->pcm, d->pcm.n - win, win);
+
+  if(level > d->cfg.voice_dbfs)
+  {
+    d->speech_seen  = true;
+    d->last_voice_n = d->pcm.n;
+
+    return;
+  }
+
+  if(!d->speech_seen)
+  {
+    // Nothing said at all: a stray tap. Give up quietly rather than hold the
+    // microphone open until the max_record_seconds watchdog.
+    if(elapsed_since(&d->rec_start) > (double)d->cfg.dictate_wait_s)
+      finish_recording(d, false);
+
+    return;
+  }
+
+  quiet_ms = (double)(d->pcm.n - d->last_voice_n) / (double)WHISPR_SAMPLE_RATE * 1000.0;
+
+  if(quiet_ms >= (double)d->cfg.silence_stop_ms)
+    finish_recording(d, true);
 }
 
 static void
@@ -543,7 +593,11 @@ handle_client(daemon_t *d, int cfd)
   switch(cmd.kind)
   {
     case WHISPR_CMD_START:
-      start_recording(d);
+      start_recording(d, false);
+      break;
+
+    case WHISPR_CMD_DICTATE:
+      start_recording(d, true);
       break;
 
     case WHISPR_CMD_STOP:
@@ -555,7 +609,7 @@ handle_client(daemon_t *d, int cfd)
         finish_recording(d, true);
 
       else
-        start_recording(d);
+        start_recording(d, false);
 
       break;
 
@@ -749,6 +803,9 @@ daemon_run(const whispr_config_t *cfg, const char *config_path, const daemon_opt
       {
         if(!audio_drain(d.cap, &d.pcm))
           finish_recording(&d, true);
+
+        else if(d.auto_stop && d.state == ST_RECORDING)
+          check_auto_stop(&d);
       }
     }
   }

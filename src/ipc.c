@@ -23,6 +23,7 @@ static const ipc_verb_t ipc_verbs[] =
   { "start",  WHISPR_CMD_START  },
   { "stop",   WHISPR_CMD_STOP   },
   { "toggle", WHISPR_CMD_TOGGLE },
+  { "dictate",WHISPR_CMD_DICTATE},
   { "cancel", WHISPR_CMD_CANCEL },
   { "status", WHISPR_CMD_STATUS },
   { "reload", WHISPR_CMD_RELOAD },

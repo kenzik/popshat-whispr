@@ -82,23 +82,35 @@ pcm_seconds(const pcm_buf_t *b)
 }
 
 double
-pcm_rms_dbfs(const pcm_buf_t *b)
+pcm_rms_dbfs_range(const pcm_buf_t *b, size_t start, size_t count)
 {
   double sum = 0.0;
   size_t i;
 
-  if(b->n == 0)
+  if(start >= b->n)
     return(-INFINITY);
 
-  for(i = 0; i < b->n; i++)
+  if(count > b->n - start)
+    count = b->n - start;
+
+  if(count == 0)
+    return(-INFINITY);
+
+  for(i = start; i < start + count; i++)
     sum += (double)b->samples[i] * (double)b->samples[i];
 
-  sum = sqrt(sum / (double)b->n);
+  sum = sqrt(sum / (double)count);
 
   if(sum <= 0.0)
     return(-INFINITY);
 
   return(20.0 * log10(sum));
+}
+
+double
+pcm_rms_dbfs(const pcm_buf_t *b)
+{
+  return(pcm_rms_dbfs_range(b, 0, b->n));
 }
 
 audio_cap_t *

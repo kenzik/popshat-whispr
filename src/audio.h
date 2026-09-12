@@ -37,6 +37,10 @@ double pcm_seconds(const pcm_buf_t *);
 // Returns -INFINITY for an empty buffer.
 double pcm_rms_dbfs(const pcm_buf_t *);
 
+// RMS of count samples starting at start, for measuring a recent window
+// rather than the whole recording. Returns -INFINITY if the range is empty.
+double pcm_rms_dbfs_range(const pcm_buf_t *, size_t start, size_t count);
+
 #ifdef AUDIO_INTERNAL
 struct audio_cap
 {
