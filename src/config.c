@@ -29,11 +29,13 @@ config_defaults(whispr_config_t *c)
   strlcpy(c->whisper_language, "en", sizeof c->whisper_language);
   c->whisper_translate = false;
 
-  // On by default because it earns its place: it takes jargon-heavy dictation
-  // from 0.42 WER to 0.16 on base.en. Users override with their own terms.
-  strlcpy(c->whisper_initial_prompt,
-          "CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulkan, systemd, Keychron",
-          sizeof c->whisper_initial_prompt);
+  // Empty, deliberately. Priming the decoder with a vocabulary is the single
+  // largest accuracy lever whispr has -- measured on the bundled fixtures it
+  // takes jargon WER from 0.42 to 0.16 -- but only for words the speaker
+  // actually says. Shipping one machine's vocabulary would bias every other
+  // user's decoder toward terms they never use, which is worse than nothing.
+  // The example config explains how to fill this in.
+  c->whisper_initial_prompt[0] = '\0';
 
   // VAD is on by default because without it Whisper invents speech from room
   // tone, and this tool types the result into the focused window.

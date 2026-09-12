@@ -1,5 +1,12 @@
 # whispr configuration -- copy to ~/.config/whispr/config
-# Unknown keys are reported rather than ignored, so a typo is visible.
+#
+# Flat key = value. Unknown keys are reported rather than ignored, so a typo is
+# visible instead of silently doing nothing. "whispr reload" applies changes
+# without a restart (deferred if a transcription is in flight).
+#
+# Every value below is a default; delete any line you do not want to override.
+# The thresholds in the second half were measured on one machine, one
+# microphone and one voice -- expect to retune voice_dbfs and min_rms_dbfs.
 
 engine              = whisper           # whisper | parakeet
 use_gpu             = true
@@ -10,10 +17,16 @@ whisper.model       = ~/.local/share/whispr/models/ggml-base.en.bin
 whisper.language    = en                # or "auto"
 whisper.translate   = false
 
-# Primes the decoder with terms it otherwise mangles. Measured on the test
-# fixtures this takes jargon WER from 0.42 to 0.16 on base.en -- it is the
-# cheapest accuracy lever available, so put your own vocabulary here.
-whisper.initial_prompt = CachyOS, Hyprland, PipeWire, ydotool, whisper.cpp, Vulkan, systemd, Keychron
+# THE SINGLE BIGGEST ACCURACY LEVER. Primes the decoder with terms it would
+# otherwise mangle. Measured on the bundled fixtures this takes jargon WER from
+# 0.42 to 0.16 on base.en -- but only for words actually spoken, so it ships
+# empty rather than biasing your decoder toward someone else's vocabulary.
+#
+# Fill it with proper nouns, jargon, names and acronyms you dictate often.
+# A comma-separated list is fine; add terms as you catch it mangling them.
+#
+# whisper.initial_prompt = Kubernetes, Postgres, Grafana, Anika, Okonkwo, SRE
+whisper.initial_prompt =
 
 # Voice activity detection. Leave this on. Without it Whisper invents plausible
 # text from room tone -- observed emitting "(dramatic music)", "Get a Clospe."
