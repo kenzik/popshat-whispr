@@ -3,7 +3,7 @@
 whispr never grabs a key itself. Your window manager owns the hotkey and runs
 `whispr start` / `whispr stop`, which talk to the daemon over a Unix socket.
 
-Two reasons, both load-bearing:
+Two reasons:
 
 - **Security.** Reading keys directly means reading `/dev/input/event*`, and
   joining the `input` group to do it lets *every* process you run keylog the
@@ -18,9 +18,9 @@ Two reasons, both load-bearing:
 **Do not skip this.** The name you think a key has is frequently not the name
 your compositor will match.
 
-The canonical trap: a keyboard's F13 arrives through xkb as `XF86Tools`, and
-F14–F16 as `XF86Launch5`–`XF86Launch7`. A binding written as `F13` then
-*silently never fires* — no error, no log, nothing to debug.
+A keyboard's F13 arrives through xkb as `XF86Tools`, and F14–F16 as
+`XF86Launch5`–`XF86Launch7`. A binding written as `F13` silently never fires:
+no error, no log, nothing to debug.
 
 ```sh
 scripts/probe-keys.sh

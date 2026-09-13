@@ -11,7 +11,7 @@ not hours.
 
 ## What whispr has access to
 
-Worth stating plainly, because a dictation tool is in a position to see a lot.
+A dictation tool is in a position to see a lot, so:
 
 **Your microphone, while you hold the key.** Capture is a child process
 (`pw-record`, `parecord` or `arecord`) spawned when recording starts and killed

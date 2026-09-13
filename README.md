@@ -84,7 +84,7 @@ Press the key you want. It prints what that key *actually* sends and a
 ready-to-paste binding, then [wm/README.md](wm/README.md) has snippets for
 Hyprland, sway/i3, river, KDE, GNOME, sxhkd and xbindkeys.
 
-Two things that will otherwise cost you an evening:
+Two constraints:
 
 **The obvious keysym name is often wrong.** A keyboard's F13 arrives through
 xkb as `XF86Tools`. A binding written as `F13` silently never fires — no error,
@@ -115,7 +115,7 @@ river and sxhkd can; KDE and GNOME cannot, and use `dictate` or `toggle`.
 
 ## Accuracy
 
-Everything in `~/.config/whispr/config`. The one setting worth your attention:
+Everything lives in `~/.config/whispr/config`. Start here:
 
 ```
 whisper.initial_prompt = Kubernetes, Postgres, Grafana, Anika, Okonkwo, SRE

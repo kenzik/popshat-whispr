@@ -49,9 +49,9 @@ something is missing, so you can also just run it and follow what it says.
 The Vulkan packages are **optional**. Skip them, or pass `--no-gpu`, and whispr
 builds for CPU.
 
-One of them catches people out: ggml needs the **`glslc` binary** to compile its
-shaders, not just the Vulkan headers and the shaderc library. On Debian, Fedora
-and Alpine that binary ships in its own package; Arch bundles it into `shaderc`.
+ggml needs the **`glslc` binary** to compile its shaders, not just the Vulkan
+headers and the shaderc library. On Debian, Fedora and Alpine that binary ships
+in its own package; Arch bundles it into `shaderc`.
 Configuring with the headers present but `glslc` missing fails with
 `Could NOT find Vulkan (missing: glslc)` — the installer recognizes that
 specific error and says so.
