@@ -37,7 +37,7 @@ more distros, better diagnostics.
 ## Building
 
 ```sh
-git clone --recursive https://github.com/dkenzik/popshat-whispr.git
+git clone --recursive https://github.com/kenzik/popshat-whispr.git
 cd popshat-whispr
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
 cmake --build build -j"$(nproc)" --target whispr

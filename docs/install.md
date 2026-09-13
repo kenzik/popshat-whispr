@@ -30,7 +30,7 @@ fully supported configuration, not a degraded one.
 sudo pacman -S --needed base-devel cmake git curl ydotool libnotify \
                        vulkan-headers spirv-headers glslang shaderc
 
-git clone --recursive https://github.com/dkenzik/popshat-whispr.git
+git clone --recursive https://github.com/kenzik/popshat-whispr.git
 cd popshat-whispr
 ./scripts/install.sh
 ```
@@ -204,7 +204,7 @@ fixtures it is worth more than the jump from `base.en` to `small.en`.
 ## Building by hand
 
 ```sh
-git clone --recursive https://github.com/dkenzik/popshat-whispr.git
+git clone --recursive https://github.com/kenzik/popshat-whispr.git
 cd popshat-whispr
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON
 cmake --build build -j"$(nproc)" --target whispr

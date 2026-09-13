@@ -60,7 +60,7 @@ Arch and derivatives:
 sudo pacman -S --needed base-devel cmake git curl ydotool libnotify \
                        vulkan-headers spirv-headers glslang shaderc
 
-git clone --recursive https://github.com/dkenzik/popshat-whispr.git
+git clone --recursive https://github.com/kenzik/popshat-whispr.git
 cd popshat-whispr
 ./scripts/install.sh
 ```

@@ -1,6 +1,6 @@
 [Unit]
 Description=whispr voice dictation daemon
-Documentation=https://github.com/dkenzik/popshat-whispr
+Documentation=https://github.com/kenzik/popshat-whispr
 # Injection needs a compositor to type into, so the service is tied to the
 # graphical session rather than to login.
 After=graphical-session.target
