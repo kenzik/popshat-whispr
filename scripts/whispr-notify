@@ -4,10 +4,27 @@
 # Always returns promptly: the daemon spawns this on the path to injection, so
 # a slow or hung notifier must never be able to delay the text reaching the
 # window.
+#
+# One notification per recording, updated in place -- "Recording" becomes
+# "Transcribing..." becomes "Transcribed" -- rather than a growing stack.
+#
+# That is done with the notification id the server hands back (the spec's
+# replaces_id), NOT with the x-canonical-private-synchronous hint. The hint is
+# a Canonical extension: mako and dunst honour it, but plenty of shells do not,
+# and on one that does not every event adds a toast instead of replacing one.
+# Worse, "dismiss" used to retract the Recording toast by sending a blank
+# notification with a 1ms timeout -- which on such a server adds a blank toast
+# rather than removing anything. It now closes the notification properly.
+#
+# The hint is still sent, because it costs nothing and lets daemons that
+# implement it collapse these without needing the id at all.
 set -u
 
 EVENT="${1:-}"
 SOUNDS=/usr/share/sounds/freedesktop/stereo
+# Per-session, and cheap to lose: a stale or missing id just means the next
+# notification is a new one instead of an update.
+STATE="${XDG_RUNTIME_DIR:-/tmp}/whispr-notify.id"
 
 play() {
     [ -r "$SOUNDS/$1.oga" ] || return 0
@@ -17,13 +34,48 @@ play() {
     return 0
 }
 
-# One replaceable notification rather than a growing stack: the synchronous hint
-# makes each new one supersede the last.
-note() {
+# The id of the notification this recording is using, or 0 for "make a new one"
+# -- which is what the spec says replaces_id = 0 means.
+nid() {
+    _id="$(cat "$STATE" 2>/dev/null)"
+    case "$_id" in
+        ''|*[!0-9]*) echo 0 ;;
+        *)           echo "$_id" ;;
+    esac
+}
+
+note() { # note <summary> <body> <timeout-ms>
     command -v notify-send >/dev/null 2>&1 || return 0
-    notify-send -a whispr -t "${3:-2000}" \
-        -h string:x-canonical-private-synchronous:whispr \
-        "$1" "${2:-}" 2>/dev/null
+    _new="$(notify-send -a whispr -t "${3:-2000}" \
+              -h string:x-canonical-private-synchronous:whispr \
+              -r "$(nid)" -p \
+              "$1" "${2:-}" 2>/dev/null)"
+    # --print-id is libnotify >= 0.7.9. Older versions print nothing, which
+    # simply means no id to reuse and every notification is a new one.
+    case "$_new" in
+        ''|*[!0-9]*) : ;;
+        *)           printf '%s' "$_new" > "$STATE" 2>/dev/null ;;
+    esac
+    return 0
+}
+
+# Take the notification off the screen. There is no notify-send option for
+# this, so it is a direct CloseNotification call.
+close_note() {
+    _id="$(nid)"
+    : > "$STATE" 2>/dev/null
+    [ "$_id" != 0 ] || return 0
+
+    if command -v gdbus >/dev/null 2>&1; then
+        gdbus call --session --dest org.freedesktop.Notifications \
+            --object-path /org/freedesktop/Notifications \
+            --method org.freedesktop.Notifications.CloseNotification "$_id" \
+            >/dev/null 2>&1
+    elif command -v busctl >/dev/null 2>&1; then
+        busctl --user call org.freedesktop.Notifications \
+            /org/freedesktop/Notifications org.freedesktop.Notifications \
+            CloseNotification u "$_id" >/dev/null 2>&1
+    fi
     return 0
 }
 
@@ -37,9 +89,8 @@ case "$EVENT" in
     done)    TEXT="$(cut -c1-120)"; note "Transcribed" "$TEXT" 2500 ;;
     empty)   note "No speech detected" "" 1500 ;;
     cancel)  note "Canceled" "" 1200 ;;
-    # Takes down the Recording toast without putting anything in its place:
-    # the synchronous hint makes it replace, and a 1ms timeout expires it.
-    dismiss) note " " "" 1 ;;
+    # Ends the recording without putting anything in its place.
+    dismiss) close_note ;;
     timeout) play dialog-warning; note "Recording timed out" "Hit the max duration." 3000 ;;
     error)   TEXT="$(cut -c1-160)"; play dialog-error; note "whispr error" "$TEXT" 4000 ;;
     *)       : ;;
