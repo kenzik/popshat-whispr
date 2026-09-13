@@ -140,7 +140,7 @@ socket, the capture pipe, and two timerfds; transcription + injection run on a w
 
 Socket `$XDG_RUNTIME_DIR/whispr.sock`, newline-delimited commands:
 
-| Command | Behaviour |
+| Command | Behavior |
 |---|---|
 | `start` | begin capture; no-op if already recording |
 | `stop` | end capture, transcribe, inject |

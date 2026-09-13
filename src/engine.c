@@ -317,7 +317,7 @@ engine_transcribe(engine_t *e, const float *pcm, size_t n, char **out_text)
     if(!s)
       continue;
 
-    // Second line of defence: discard any segment the model itself rates as
+    // Second line of defense: discard any segment the model itself rates as
     // probably-not-speech. Typing a hallucination into the focused window is
     // worse than typing nothing, so this errs toward dropping.
     if(whisper_full_get_segment_no_speech_prob(e->wctx, i) > (float)e->cfg->max_no_speech)

@@ -202,7 +202,7 @@ default and an explicit list of what is *not* verified, in
 ```
 
 `run-tests.sh` asserts **word error rate under a threshold**, not string
-equality — ASR never matches byte-for-byte — and normalises first, so
+equality — ASR never matches byte-for-byte — and normalizes first, so
 `"sixty four"` and `"64"` compare equal. Thresholds are a **ratchet: tighten
 only.** One loosened to make a failing run go green catches nothing ever again.
 

@@ -490,7 +490,7 @@ finish_recording(daemon_t *d, bool inject)
     return;
   }
 
-  // First line of defence against hallucination, and the cheapest: audio with
+  // First line of defense against hallucination, and the cheapest: audio with
   // no energy in it cannot contain speech, so never hand it to the model.
   // Without this, a muted or wrong input device makes whispr type invented
   // sentences into whatever window is focused.

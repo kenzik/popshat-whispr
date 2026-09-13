@@ -11,7 +11,7 @@ whispr is distribution-agnostic by design. It needs:
 | A C and C++ compiler, CMake ≥ 3.16, git, curl | build only |
 
 Nothing else is assumed. systemd is used if present and skipped if not. Wayland
-and X11 both work. A GPU is optional — Vulkan is an optimisation, and CPU is a
+and X11 both work. A GPU is optional — Vulkan is an optimization, and CPU is a
 fully supported configuration, not a degraded one.
 
 > **Verified on:** CachyOS (Arch), Hyprland, PipeWire, Vulkan on an NVIDIA GPU.
@@ -53,7 +53,7 @@ One of them catches people out: ggml needs the **`glslc` binary** to compile its
 shaders, not just the Vulkan headers and the shaderc library. On Debian, Fedora
 and Alpine that binary ships in its own package; Arch bundles it into `shaderc`.
 Configuring with the headers present but `glslc` missing fails with
-`Could NOT find Vulkan (missing: glslc)` — the installer recognises that
+`Could NOT find Vulkan (missing: glslc)` — the installer recognizes that
 specific error and says so.
 
 ### Debian, Ubuntu, Mint, Pop!_OS

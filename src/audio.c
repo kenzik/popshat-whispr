@@ -271,7 +271,7 @@ audio_stop(audio_cap_t *c, pcm_buf_t *b)
     kill(c->pid, SIGINT);
 
   // The final drain is the opposite case from the loop's: the child has been
-  // signalled and is flushing, so we must wait for its tail rather than give up
+  // signaled and is flushing, so we must wait for its tail rather than give up
   // on EAGAIN. Blocking again makes EOF -- the child closing the pipe -- the
   // terminator.
   if(c->fd >= 0)
@@ -287,7 +287,7 @@ audio_stop(audio_cap_t *c, pcm_buf_t *b)
 
   if(c->pid > 0)
   {
-    // The child has already been signalled and its pipe closed, so this waits
+    // The child has already been signaled and its pipe closed, so this waits
     // on a process that is on its way out rather than blocking indefinitely.
     if(waitpid(c->pid, &status, 0) < 0 && errno == EINTR)
       waitpid(c->pid, &status, 0);

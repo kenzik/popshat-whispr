@@ -44,7 +44,7 @@ cmake --build build -j"$(nproc)" --target whispr
 ```
 
 `-DGGML_VULKAN=ON` adds GPU support if the Vulkan and SPIR-V headers, glslang
-and shaderc are installed. It is an optimisation: CPU is fully functional, so
+and shaderc are installed. It is an optimization: CPU is fully functional, so
 nothing may ever *require* it.
 
 Run the daemon you just built without disturbing the installed one:

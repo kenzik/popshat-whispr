@@ -16,7 +16,7 @@ jobs:
           # CPU is a supported configuration, not a fallback, so it is the one
           # that must never break.
           - { name: cpu,    vulkan: "OFF" }
-          # The GPU path is an optimisation, but a build error in it would only
+          # The GPU path is an optimization, but a build error in it would only
           # ever be found by a user with the headers installed.
           - { name: vulkan, vulkan: "ON" }
     steps:

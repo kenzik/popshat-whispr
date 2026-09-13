@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Word error rate between a reference and a hypothesis. Stdlib only.
 
-Normalisation matters as much as the edit distance here: we are measuring
+Normalization matters as much as the edit distance here: we are measuring
 recognition errors, not formatting choices. "64" vs "sixty four" and "don't"
 vs "dont" are the same words spoken, so they must not count against the model.
 """

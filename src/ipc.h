@@ -15,7 +15,7 @@ typedef enum
   WHISPR_CMD_RELOAD,
 } whispr_cmd_kind_t;
 
-// A command that has crossed the socket boundary. Brace-initialise this only
+// A command that has crossed the socket boundary. Brace-initialize this only
 // inside ipc_parse_cmd(): building one anywhere else launders the validation
 // it exists to carry.
 typedef struct

@@ -195,7 +195,7 @@ git -C "$ROOT" submodule update --init --recursive
 # header. ggml's Vulkan backend needs vulkan-headers, spirv-headers, glslang and
 # shaderc, and checking for one of them only moves the failure later -- as a
 # vulkan.h check did, which passed and then died on missing SPIRV-Headers.
-# GPU support is an optimisation, so failing to get it must never fail install.
+# GPU support is an optimization, so failing to get it must never fail install.
 if [ "$WANT_GPU" = 1 ]; then
     CFGLOG="$(mktemp)"
     say "Configuring with Vulkan"
