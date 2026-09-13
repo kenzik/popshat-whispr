@@ -31,7 +31,9 @@ jobs:
 
       - name: Install Vulkan toolchain
         if: matrix.vulkan == 'ON'
-        run: sudo apt-get install -y libvulkan-dev spirv-headers glslang-tools libshaderc-dev
+        # glslc is its own package here, separate from libshaderc-dev. ggml's
+        # FindVulkan requires the binary, not just the library and headers.
+        run: sudo apt-get install -y libvulkan-dev spirv-headers glslang-tools libshaderc-dev glslc
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=${{ matrix.vulkan }}

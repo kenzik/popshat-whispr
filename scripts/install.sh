@@ -108,19 +108,19 @@ pkg_hint() {
         arch:inject)   echo "sudo pacman -S --needed ydotool libnotify" ;;
 
         debian:build)  echo "sudo apt install build-essential cmake git curl" ;;
-        debian:vulkan) echo "sudo apt install libvulkan-dev spirv-headers glslang-tools libshaderc-dev" ;;
+        debian:vulkan) echo "sudo apt install libvulkan-dev spirv-headers glslang-tools libshaderc-dev glslc" ;;
         debian:inject) echo "sudo apt install ydotool libnotify-bin" ;;
 
         fedora:build)  echo "sudo dnf install gcc gcc-c++ cmake git curl" ;;
-        fedora:vulkan) echo "sudo dnf install vulkan-headers spirv-headers-devel glslang-devel libshaderc-devel" ;;
+        fedora:vulkan) echo "sudo dnf install vulkan-headers spirv-headers-devel glslang-devel libshaderc-devel glslc" ;;
         fedora:inject) echo "sudo dnf install ydotool libnotify" ;;
 
         suse:build)    echo "sudo zypper install gcc gcc-c++ cmake git curl" ;;
-        suse:vulkan)   echo "sudo zypper install vulkan-devel spirv-headers glslang-devel shaderc-devel" ;;
+        suse:vulkan)   echo "sudo zypper install vulkan-devel spirv-headers glslang-devel shaderc-devel shaderc" ;;
         suse:inject)   echo "sudo zypper install ydotool libnotify-tools" ;;
 
         alpine:build)  echo "sudo apk add build-base cmake git curl" ;;
-        alpine:vulkan) echo "sudo apk add vulkan-headers spirv-headers glslang-dev shaderc-dev" ;;
+        alpine:vulkan) echo "sudo apk add vulkan-headers spirv-headers glslang-dev shaderc-dev shaderc" ;;
         alpine:inject) echo "sudo apk add wtype xdotool libnotify   # no ydotool in Alpine" ;;
 
         void:build)    echo "sudo xbps-install -S base-devel cmake git curl" ;;
@@ -205,6 +205,13 @@ if [ "$WANT_GPU" = 1 ]; then
         warn "Vulkan unavailable -- falling back to CPU."
         if grep -q 'SPIRV-Headers' "$CFGLOG"; then
             warn "  Missing SPIRV-Headers."
+        elif grep -q 'missing: glslc' "$CFGLOG"; then
+            # The headers and loader can all be present and this still fails:
+            # ggml needs the glslc BINARY to compile its shaders, and on Debian,
+            # Fedora and Alpine that ships separately from the shaderc library.
+            # Arch bundles both in "shaderc", which is why this went unnoticed.
+            warn "  Vulkan is installed but glslc, the shader compiler, is not."
+            warn "  It is a separate package from the shaderc library on most distributions."
         else
             warn "  Missing one of: vulkan headers, spirv-headers, glslang, shaderc"
             warn "  Details: $CFGLOG"

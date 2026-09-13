@@ -46,15 +46,22 @@ CachyOS, EndeavourOS, Manjaro and the rest are detected as Arch automatically.
 The installer detects your distribution and prints the right package command if
 something is missing, so you can also just run it and follow what it says.
 
-The four Vulkan packages are **optional**. Skip them, or pass `--no-gpu`, and
-whispr builds for CPU.
+The Vulkan packages are **optional**. Skip them, or pass `--no-gpu`, and whispr
+builds for CPU.
+
+One of them catches people out: ggml needs the **`glslc` binary** to compile its
+shaders, not just the Vulkan headers and the shaderc library. On Debian, Fedora
+and Alpine that binary ships in its own package; Arch bundles it into `shaderc`.
+Configuring with the headers present but `glslc` missing fails with
+`Could NOT find Vulkan (missing: glslc)` — the installer recognises that
+specific error and says so.
 
 ### Debian, Ubuntu, Mint, Pop!_OS
 
 ```sh
 sudo apt install build-essential cmake git curl ydotool libnotify-bin
 # optional, for GPU:
-sudo apt install libvulkan-dev spirv-headers glslang-tools libshaderc-dev
+sudo apt install libvulkan-dev spirv-headers glslang-tools libshaderc-dev glslc
 ```
 
 Check `cmake --version` first — whispr needs 3.16 or newer, and some older LTS
@@ -66,7 +73,7 @@ both solve it.
 ```sh
 sudo dnf install gcc gcc-c++ cmake git curl ydotool libnotify
 # optional, for GPU:
-sudo dnf install vulkan-headers spirv-headers-devel glslang-devel libshaderc-devel
+sudo dnf install vulkan-headers spirv-headers-devel glslang-devel libshaderc-devel glslc
 ```
 
 ### openSUSE
@@ -74,7 +81,7 @@ sudo dnf install vulkan-headers spirv-headers-devel glslang-devel libshaderc-dev
 ```sh
 sudo zypper install gcc gcc-c++ cmake git curl ydotool libnotify-tools
 # optional, for GPU:
-sudo zypper install vulkan-devel spirv-headers glslang-devel shaderc-devel
+sudo zypper install vulkan-devel spirv-headers glslang-devel shaderc-devel shaderc
 ```
 
 These names could not be checked against openSUSE's index (its package search
@@ -86,7 +93,7 @@ recipe. `zypper search` will find the real ones.
 ```sh
 sudo apk add build-base cmake git curl wtype xdotool libnotify
 # optional, for GPU:
-sudo apk add vulkan-headers spirv-headers glslang-dev shaderc-dev
+sudo apk add vulkan-headers spirv-headers glslang-dev shaderc-dev shaderc
 ```
 
 Two Alpine-specific notes. **There is no `ydotool` package** — `wtype` (Wayland)
