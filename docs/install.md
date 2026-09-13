@@ -187,7 +187,7 @@ effect nobody asked for.
 | `ggml-parakeet-tdt-0.6b-v3-f16.bin` | 1.2 GB | no — alternative engine |
 
 They live in `~/.local/share/whispr/models/` (override with
-`WHISPR_MODEL_DIR`). Licences are in [../THIRD-PARTY.md](../THIRD-PARTY.md);
+`WHISPR_MODEL_DIR`). Licenses are in [../THIRD-PARTY.md](../THIRD-PARTY.md);
 note that the Parakeet weights are CC-BY-4.0 rather than MIT.
 
 **The VAD model is not optional.** The default config enables VAD, and

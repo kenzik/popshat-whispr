@@ -1,16 +1,16 @@
 # Third-party components
 
-whispr itself is MIT (see [LICENSE](LICENSE)). It does not bundle any of the
-following — each is fetched from its own upstream at build or install time —
-but redistributing a built whispr, or the models alongside it, means carrying
-these terms too.
+whispr itself is MIT (see [LICENSE.txt](LICENSE.txt)). It does not bundle any
+of the following — each is fetched from its own upstream at build or install
+time — but redistributing a built whispr, or the models alongside it, means
+carrying these terms too.
 
-Licences below were read from each project's own repository. Where whispr only
+Licenses below were read from each project's own repository. Where whispr only
 reads a file the system already provides, that is noted rather than claimed.
 
 ## Code
 
-| Component | Where | Licence |
+| Component | Where | License |
 |---|---|---|
 | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (incl. `ggml`, `libwhisper`, `libparakeet`) | `vendor/whisper.cpp`, git submodule pinned at **v1.9.4** | MIT — Copyright (c) 2023-2026 The ggml authors |
 
@@ -23,7 +23,7 @@ built from that submodule. Nothing is vendored by copy; `git submodule update
 None are redistributed by this repository. `scripts/install.sh` downloads the
 first two from Hugging Face; the third is opt-in.
 
-| Model | Source | Licence |
+| Model | Source | License |
 |---|---|---|
 | `ggml-base.en.bin` (141 MB) | [`ggerganov/whisper.cpp`](https://huggingface.co/ggerganov/whisper.cpp) | MIT — a ggml conversion of [OpenAI Whisper](https://github.com/openai/whisper) (MIT) |
 | `ggml-silero-v5.1.2.bin` (865 KB, VAD) | [`ggml-org/whisper-vad`](https://huggingface.co/ggml-org/whisper-vad) | MIT — a ggml conversion of [silero-vad](https://github.com/snakers4/silero-vad) |

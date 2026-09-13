@@ -219,9 +219,9 @@ fixture in a voice that is not the author's.
 Run `whispr-doctor` and paste the output into any bug report — it answers most
 of what a maintainer would otherwise have to ask.
 
-## Licence
+## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE.txt](LICENSE.txt).
 
 whispr bundles nothing. whisper.cpp is a submodule (MIT) and the models are
 downloaded from their own upstreams at install time; the Whisper and Silero
